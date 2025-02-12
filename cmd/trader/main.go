@@ -7,7 +7,7 @@ import (
 	"estore-trade/internal/config"
 	"estore-trade/internal/handler"
 	"estore-trade/internal/infrastructure/database/postgres"
-	zapLogger "estore-trade/internal/infrastructure/logger/zap"
+	"estore-trade/internal/infrastructure/logger/zapLogger"
 	"estore-trade/internal/infrastructure/persistence/tachibana" // 立花
 	"estore-trade/internal/usecase"
 
@@ -36,7 +36,7 @@ func main() {
 	}
 	defer db.Close()
 
-	// 立花証券APIクライアントの初期化
+	// APIクライアントの初期化
 	tachibanaClient := tachibana.NewTachibanaClient(cfg, logger)
 
 	// リポジトリの初期化 (DBを使用する場合)
