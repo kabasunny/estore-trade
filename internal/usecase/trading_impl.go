@@ -9,11 +9,11 @@ import (
 )
 
 type tradingUsecase struct {
-	tachibanaClient *tachibana.TachibanaClient //型を修正
+	tachibanaClient tachibana.TachibanaClient //型を修正
 	logger          *zap.Logger
 }
 
-func NewTradingUsecase(tachibanaClient *tachibana.TachibanaClient, logger *zap.Logger) TradingUsecase {
+func NewTradingUsecase(tachibanaClient tachibana.TachibanaClient, logger *zap.Logger) TradingUsecase {
 	return &tradingUsecase{
 		tachibanaClient: tachibanaClient,
 		logger:          logger,
