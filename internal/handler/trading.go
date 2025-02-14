@@ -1,3 +1,4 @@
+// internal/handler/trading.go
 package handler
 
 import (
@@ -5,19 +6,17 @@ import (
 	"fmt"
 	"net/http"
 
-	"estore-trade/internal/domain"  // ドメインモデルをインポート
-	"estore-trade/internal/usecase" // ユースケースインターフェースをインポート
+	"estore-trade/internal/domain"
+	"estore-trade/internal/usecase"
 
-	"go.uber.org/zap" //zapロガー
+	"go.uber.org/zap"
 )
 
-// TradingHandler は、取引関連のHTTPリクエストを処理するハンドラです。
 type TradingHandler struct {
 	tradingUsecase usecase.TradingUsecase
-	logger         *zap.Logger // ロガーへのポインタ
+	logger         *zap.Logger
 }
 
-// NewTradingHandler は、TradingHandlerの新しいインスタンスを作成します。
 func NewTradingHandler(tradingUsecase usecase.TradingUsecase, logger *zap.Logger) *TradingHandler {
 	return &TradingHandler{
 		tradingUsecase: tradingUsecase,
@@ -25,12 +24,11 @@ func NewTradingHandler(tradingUsecase usecase.TradingUsecase, logger *zap.Logger
 	}
 }
 
-// HandleTrade は、"/trade" エンドポイントへのPOSTリクエストを処理します (例)。
+// HandleTrade は、"/trade" エンドポイントへのPOSTリクエストを処理 (必要に応じて残す)
 func (h *TradingHandler) HandleTrade(w http.ResponseWriter, r *http.Request) {
-	// リクエストのコンテキストを取得 (キャンセルやタイムアウトの処理に使う)
-	ctx := r.Context()
-
+	// ... (既存のコード) ...
 	// 1. リクエストボディのデコード (JSONをGoの構造体に変換)
+	ctx := r.Context()
 	var orderRequest domain.Order
 	if err := json.NewDecoder(r.Body).Decode(&orderRequest); err != nil {
 		h.logger.Error("Invalid request body", zap.Error(err))
@@ -70,11 +68,7 @@ func (h *TradingHandler) HandleTrade(w http.ResponseWriter, r *http.Request) {
 	h.logger.Info("Order placed successfully", zap.String("order_id", placedOrder.ID))
 }
 
-// 他のハンドラ関数 (例: GetOrderStatusHandler, CancelOrderHandler) をここに追加
-
-// validateOrderRequest は、注文リクエストのバリデーションを行います (例)。
 func validateOrderRequest(order *domain.Order) error {
-	// ここで、注文リクエストの内容をチェックします (例: 数量が正であるか、銘柄コードが有効かなど)。
 	if order.Quantity <= 0 {
 		return fmt.Errorf("invalid order quantity: %d", order.Quantity)
 	}

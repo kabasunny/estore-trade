@@ -1,3 +1,4 @@
+// internal/infrastructure/persistence/tachibana/tachibana_client_impl.go
 package tachibana
 
 import (
@@ -10,117 +11,150 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"sync" // Mutex を使うため
 	"time"
 
 	"go.uber.org/zap"
 )
 
 type TachibanaClientIntImple struct {
-	baseURL *url.URL //URL型に変更
-	apiKey  string
-	secret  string
-	logger  *zap.Logger
+	baseURL    *url.URL
+	apiKey     string
+	secret     string
+	logger     *zap.Logger
+	requestURL string       // キャッシュする仮想URL
+	expiry     time.Time    // 仮想URLの有効期限
+	mu         sync.RWMutex // 排他制御用
 }
 
 func NewTachibanaClient(cfg *config.Config, logger *zap.Logger) TachibanaClient {
-	// URLのパースとエラーハンドリング
 	parsedURL, err := url.Parse(cfg.TachibanaBaseURL)
 	if err != nil {
-		// URLのパースに失敗した場合、致命的なエラーとして扱う
-		logger.Fatal("Invalid Tachibana API base URL", zap.Error(err)) //loggerでエラー記録
-		return nil                                                     //nilを返して呼び出し元で処理
+		logger.Fatal("Invalid Tachibana API base URL", zap.Error(err))
+		return nil
 	}
 	return &TachibanaClientIntImple{
-		baseURL: parsedURL, //パースされたURL
+		baseURL: parsedURL,
 		apiKey:  cfg.TachibanaAPIKey,
 		secret:  cfg.TachibanaAPISecret,
-		logger:  logger, //loggerを受け取る
+		logger:  logger,
 	}
 }
 
-// APIに対してログインし、ユーザーIDとパスワードを使用して必要な認証情報を取得し、成功した場合、APIとやり取りするためのリクエストURLを返す
+// Login は API にログインし、仮想URLを返す。有効期限内ならキャッシュされたURLを返す
 func (tc *TachibanaClientIntImple) Login(ctx context.Context, userID, password string) (string, error) {
-	// 謎の文字列キーは、API仕様書にて参照　https://www.e-shiten.jp/e_api/mfds_json_api_refference.html
+	// --- ここから修正 ---
+	// Read Lock: キャッシュされたURLが有効ならそれを返す
+	tc.mu.RLock()
+	if time.Now().Before(tc.expiry) && tc.requestURL != "" {
+		tc.mu.RUnlock()
+		return tc.requestURL, nil
+	}
+	tc.mu.RUnlock() // Unlockを確実に実行
 
-	// リクエストデータの作成
+	// Write Lock: 新しいURLを取得
+	tc.mu.Lock()
+	defer tc.mu.Unlock() // Unlockを確実に実行(defer)
+
+	// 他のゴルーチンが既にURLを更新したかもしれないので、再度チェック
+	if time.Now().Before(tc.expiry) && tc.requestURL != "" {
+		return tc.requestURL, nil
+	}
+	// --- ここまで修正 ---
+
 	payload := map[string]string{
-		"sCLMID":    "CLMAuthLoginRequest", // 機能ID：ログインリクエスト
-		"sUserId":   userID,                // ユーザーID
-		"sPassword": password,              // パスワード
+		"sCLMID":    "CLMAuthLoginRequest",
+		"sUserId":   userID,
+		"sPassword": password,
 	}
 
-	// JSON 形式にエンコード
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
-		tc.logger.Error("Failed to marshal login payload", zap.Error(err)) // エラーログ
+		tc.logger.Error("Failed to marshal login payload", zap.Error(err))
 		return "", fmt.Errorf("failed to marshal login payload: %w", err)
 	}
 
-	// リクエストの作成と送信
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, tc.baseURL.String()+"login", bytes.NewBuffer(payloadJSON)) // baseURLを文字列に変換して使用
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, tc.baseURL.String()+"login", bytes.NewBuffer(payloadJSON))
 	if err != nil {
 		tc.logger.Error("Failed to create login request", zap.Error(err))
 		return "", fmt.Errorf("failed to create login request: %w", err)
 	}
-	req.Header.Set("Content-Type", "application/json") // ヘッダーにContent-Typeを設定
-	client := &http.Client{Timeout: 10 * time.Second}  // タイムアウトを設定
+	req.Header.Set("Content-Type", "application/json")
+	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
 		tc.logger.Error("Failed to send login request", zap.Error(err))
 		return "", fmt.Errorf("failed to send login request: %w", err)
 	}
-	defer resp.Body.Close() // 関数の終了時にレスポンスボディを閉じる
+	defer resp.Body.Close()
 
-	// レスポンスの処理
 	if resp.StatusCode != http.StatusOK {
 		tc.logger.Error("Login failed: non-200 status code", zap.Int("status_code", resp.StatusCode))
 		return "", fmt.Errorf("login failed: non-200 status code: %d", resp.StatusCode)
 	}
 
-	// レスポンスボディをデコード
 	var response map[string]string
-	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil { // データストリームをリアルタイムで直接Goのデータ構造にデコード
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		tc.logger.Error("Failed to decode login response", zap.Error(err))
 		return "", fmt.Errorf("failed to decode login response: %w", err)
 	}
 
-	// 結果コードの確認：0は正常なとき
-	if response["sResultCode"] != "0" { // 0は正常、他はエラー
+	if response["sResultCode"] != "0" {
 		tc.logger.Error("Login API returned an error", zap.String("result_code", response["sResultCode"]), zap.String("result_text", response["sResultText"]))
 		return "", fmt.Errorf("login API returned an error: %s - %s", response["sResultCode"], response["sResultText"])
 	}
 
-	// 仮想URLを取得
 	requestURL, ok := response["sUrlRequest"]
 	if !ok {
-		tc.logger.Error("sUrlRequest not found in login response") // 仮想URLがレスポンスに含まれていない場合のエラーログ
+		tc.logger.Error("sUrlRequest not found in login response")
 		return "", fmt.Errorf("sUrlRequest not found in login response")
 	}
-	return requestURL, nil // 正常終了時にリクエストURLを返す
+
+	// --- ここから修正 ---
+	// キャッシュの更新 (有効期限は仮に1時間後とする)
+	tc.requestURL = requestURL
+	tc.expiry = time.Now().Add(1 * time.Hour) // 有効期限: 1時間後
+	// --- ここまで修正 ---
+
+	return requestURL, nil
 }
 
-// APIに対して新しい株式注文
+// ---リファクタリング用 途中---
+// 定数定義
+const (
+	clmidPlaceOrder            = "CLMKabuNewOrder"
+	zyoutoekiKazeiCTokutei     = "1"  // 特定口座
+	sizyouCToushou             = "00" // 東証
+	baibaiKubunBuy             = "3"
+	baibaiKubunSell            = "1"
+	conditionSashine           = "0" // 指値
+	genkinShinyouKubunGenbutsu = "0" // 現物
+	orderExpireDay             = "0" // 当日限り
+)
+
+// ---リファクタリング用 途中---
+
+// PlaceOrder は API に対して新しい株式注文を行う
 func (tc *TachibanaClientIntImple) PlaceOrder(ctx context.Context, requestURL string, order *domain.Order) (*domain.Order, error) {
 	//立花証券の注文APIの仕様に合わせてデータを作成
-	payload := map[string]interface{}{ //interface{}で異なる型を許容
-		"sCLMID":                    "CLMKabuNewOrder",
-		"sZyoutoekiKazeiC":          "1", // 例: 特定口座
-		"sIssueCode":                order.Symbol,
-		"sSizyouC":                  "00", // 例: 東証
-		"sBaibaiKubun":              map[string]string{"buy": "3", "sell": "1"}[order.Side],
-		"sCondition":                "0",                                           // 例: 指値
-		"sOrderPrice":               strconv.FormatFloat(order.Price, 'f', -1, 64), // 文字列に変換
-		"sOrderSuryou":              strconv.Itoa(order.Quantity),                  // 文字列に変換
-		"sGenkinShinyouKubun":       "0",                                           // 例: 現物
-		"sOrderExpireDay":           "0",
-		"sGyakusasiOrderType":       "0",
-		"sGyakusasiZyouken":         "0",
-		"sGyakusasiPrice":           "*",
-		"sTatebiType":               "*",
-		"sTategyokuZyoutoekiKazeiC": "*",
-		"sSecondPassword":           tc.secret, //第2パスワード
+
+	// ---リファクタリング例---
+	payload := map[string]interface{}{
+		"sCLMID":              clmidPlaceOrder,                                                               // 定数
+		"sZyoutoekiKazeiC":    zyoutoekiKazeiCTokutei,                                                        // 定数
+		"sIssueCode":          order.Symbol,                                                                  // 銘柄コード
+		"sSizyouC":            sizyouCToushou,                                                                // 定数
+		"sBaibaiKubun":        map[string]string{"buy": baibaiKubunBuy, "sell": baibaiKubunSell}[order.Side], // 定数
+		"sCondition":          conditionSashine,                                                              // 定数
+		"sOrderPrice":         strconv.FormatFloat(order.Price, 'f', -1, 64),
+		"sOrderSuryou":        strconv.Itoa(order.Quantity),
+		"sGenkinShinyouKubun": genkinShinyouKubunGenbutsu, // 定数
+		"sOrderExpireDay":     orderExpireDay,             // 定数
+		// ... 他のフィールド ...
+		"sSecondPassword": tc.secret, //第2パスワード
 	}
 
+	// ---リファクタリングここまで---
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
 		tc.logger.Error("注文ペイロードのJSONエンコードに失敗", zap.Error(err))
@@ -128,7 +162,7 @@ func (tc *TachibanaClientIntImple) PlaceOrder(ctx context.Context, requestURL st
 	}
 
 	// リクエストの送信
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, requestURL, bytes.NewBuffer(payloadJSON)) //ctx context.Context
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, requestURL, bytes.NewBuffer(payloadJSON))
 	if err != nil {
 		tc.logger.Error("注文リクエストの作成に失敗", zap.Error(err))
 		return nil, fmt.Errorf("failed to create order request: %w", err)
@@ -168,9 +202,7 @@ func (tc *TachibanaClientIntImple) PlaceOrder(ctx context.Context, requestURL st
 	return order, nil
 }
 
-// 注文IDに基づいて、注文のステータスを取得
 func (tc *TachibanaClientIntImple) GetOrderStatus(ctx context.Context, requestURL string, orderID string) (*domain.Order, error) {
-	// 1. リクエストデータの準備 (CLMOrderListDetail を使用)
 	payload := map[string]string{
 		"sCLMID":       "CLMOrderListDetail",
 		"sOrderNumber": orderID,
@@ -181,7 +213,6 @@ func (tc *TachibanaClientIntImple) GetOrderStatus(ctx context.Context, requestUR
 		return nil, fmt.Errorf("failed to marshal order status request payload: %w", err)
 	}
 
-	// 2. リクエストの送信
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, requestURL, bytes.NewBuffer(payloadJSON))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create order status request: %w", err)
@@ -195,7 +226,6 @@ func (tc *TachibanaClientIntImple) GetOrderStatus(ctx context.Context, requestUR
 	}
 	defer resp.Body.Close()
 
-	// 3. レスポンスの処理
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("order status API returned non-200 status code: %d", resp.StatusCode)
 	}
@@ -209,7 +239,6 @@ func (tc *TachibanaClientIntImple) GetOrderStatus(ctx context.Context, requestUR
 		return nil, fmt.Errorf("order status API returned an error: %s - %s", response["sResultCode"], response["sResultText"])
 	}
 
-	// 4. レスポンスから必要な情報を抽出して、domain.Orderオブジェクトにマッピング
 	order := &domain.Order{
 		ID:     response["sOrderNumber"].(string),
 		Status: response["sOrderStatus"].(string), // APIのsOrderStatusを使用
@@ -219,9 +248,7 @@ func (tc *TachibanaClientIntImple) GetOrderStatus(ctx context.Context, requestUR
 	return order, nil
 }
 
-// 注文IDに基づいて、注文のキャンセル
 func (tc *TachibanaClientIntImple) CancelOrder(ctx context.Context, requestURL string, orderID string) error {
-	// 1. リクエストデータの準備 (CLMKabuCancelOrder を使用)
 	payload := map[string]string{
 		"sCLMID":          "CLMKabuCancelOrder",
 		"sOrderNumber":    orderID,
@@ -233,7 +260,6 @@ func (tc *TachibanaClientIntImple) CancelOrder(ctx context.Context, requestURL s
 		return fmt.Errorf("failed to marshal cancel order request payload: %w", err)
 	}
 
-	// 2. リクエストの送信
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, requestURL, bytes.NewBuffer(payloadJSON))
 	if err != nil {
 		return fmt.Errorf("failed to create cancel order request: %w", err)
@@ -247,7 +273,6 @@ func (tc *TachibanaClientIntImple) CancelOrder(ctx context.Context, requestURL s
 	}
 	defer resp.Body.Close()
 
-	// 3. レスポンスの処理
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("cancel order API returned non-200 status code: %d", resp.StatusCode)
 	}
@@ -261,5 +286,11 @@ func (tc *TachibanaClientIntImple) CancelOrder(ctx context.Context, requestURL s
 		return fmt.Errorf("cancel order API returned an error: %s - %s", response["sResultCode"], response["sResultText"])
 	}
 
-	return nil // キャンセル成功
+	return nil
+}
+
+// ConnectEventStream は、EVENT I/F への接続を確立し、受信したイベントをチャネルに流す
+func (tc *TachibanaClientIntImple) ConnectEventStream(ctx context.Context) (<-chan *domain.OrderEvent, error) {
+	//  EventStream 構造体を使うように変更
+	return nil, fmt.Errorf("ConnectEventStream method should be implemented in event_stream.go")
 }

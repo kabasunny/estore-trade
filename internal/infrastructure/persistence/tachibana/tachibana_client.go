@@ -18,4 +18,6 @@ type TachibanaClient interface {
 
 	// 指定された注文IDに基づいて注文のキャンセルを行い、キャンセルが成功した場合はエラーを返さない
 	CancelOrder(ctx context.Context, requestURL string, orderID string) error
+
+	ConnectEventStream(ctx context.Context) (<-chan *domain.OrderEvent, error) // OrderEventチャネル
 }

@@ -1,62 +1,104 @@
+// cmd/trader/main.go
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"estore-trade/internal/config"
 	"estore-trade/internal/handler"
 	"estore-trade/internal/infrastructure/database/postgres"
 	"estore-trade/internal/infrastructure/logger/zapLogger"
-	"estore-trade/internal/infrastructure/persistence/tachibana" // 立花
+	"estore-trade/internal/infrastructure/persistence"
+	"estore-trade/internal/infrastructure/persistence/tachibana"
 	"estore-trade/internal/usecase"
 
-	"go.uber.org/zap" // go.uber.org/zap はそのままインポート
+	"go.uber.org/zap"
 )
 
-// 設定の読み込み: 環境変数からAPIキーやデータベース接続情報などを読み込む
-// ロギング: zap ロガーを使用して、アプリケーションの動作状況を記録する
-// データベース接続: PostgreSQL データベースへの接続を確立・管理する
-// 外部APIクライアント: 立花証券のAPIとの通信を行うクライアントを初期化する
-// ビジネスロジック (ユースケース): 注文の発注、状態取得、キャンセルの処理を行う
-// HTTPハンドラ: 外部からのHTTPリクエスト（例えば、API Gatewayからのリクエスト）を受け取り、ユースケース層の処理を呼び出し、結果をレスポンスとして返す
-
 func main() {
-	// 設定の読み込み
+	// ... (設定の読み込み、ロガー、DB接続、APIクライアントの初期化は変更なし) ...
 	cfg, err := config.LoadConfig(".env")
 	if err != nil {
-		log.Fatal("設定ファイルの読み込みに失敗:", err)
+		log.Fatalf("設定ファイルの読み込みに失敗: %v", err)
 	}
 
-	// ロガーの初期化
-	logger, err := zapLogger.NewZapLogger(cfg) // zapロガーの初期化
+	logger, err := zapLogger.NewZapLogger(cfg)
 	if err != nil {
-		log.Fatal("ロガーの初期化に失敗:", err)
+		log.Fatalf("ロガーの初期化に失敗: %v", err)
 	}
-	defer logger.Sync() // プログラム終了時にバッファをフラッシュ
+	defer logger.Sync()
 
-	// データベース接続
 	db, err := postgres.NewPostgresDB(cfg, logger)
 	if err != nil {
-		logger.Fatal("DB接続エラー:", zap.Error(err)) // zap.Error(err) を使う
+		logger.Fatal("DB接続エラー:", zap.Error(err))
 		return
 	}
 	defer db.Close()
 
-	// APIクライアントの初期化
 	tachibanaClient := tachibana.NewTachibanaClient(cfg, logger)
 
-	// リポジトリの初期化 (DBを使用する場合)
-	// tradingRepo := postgres.NewTradingRepository(db)
+	// リポジトリの初期化
+	orderRepo := persistence.NewOrderRepository(db.DB())
+	accountRepo := persistence.NewAccountRepository(db.DB())
 
-	// ユースケースの初期化 (立花証券APIクライアントを注入)
-	tradingUsecase := usecase.NewTradingUsecase(tachibanaClient, logger) //loggerも渡す
+	// ユースケースの初期化
+	tradingUsecase := usecase.NewTradingUsecase(tachibanaClient, logger, orderRepo, accountRepo)
 
-	// HTTPハンドラの初期化 (ユースケースを注入)
-	tradingHandler := handler.NewTradingHandler(tradingUsecase, logger) //loggerも渡す
+	// EventStreamの初期化 (書き込み専用チャネルを渡す)
+	eventStream := tachibana.NewEventStream(tachibanaClient, cfg, logger, tradingUsecase.GetEventChannelWriter()) // 修正
+	go func() {
+		if err := eventStream.Start(); err != nil {
+			logger.Error("EventStream error", zap.Error(err))
+		}
+	}()
 
-	// HTTPサーバーの設定と起動 (例: net/httpを使用)
-	http.HandleFunc("/trade", tradingHandler.HandleTrade) // API Gatewayからのリクエストを受け付ける
-	logger.Info("Starting server on port :8080")          //loggerで開始を記録
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	// EventStreamからのイベントを処理するゴルーチン (main.go 内に追加)
+	go func() {
+		for evt := range tradingUsecase.GetEventChannelReader() { // 修正: GetEventChannelReader() を使う
+			if err := tradingUsecase.HandleOrderEvent(context.Background(), evt); err != nil {
+				logger.Error("Failed to handle order event", zap.Error(err))
+			}
+		}
+	}()
+
+	// ... (HTTPハンドラ、サーバー起動、シグナルハンドリングは変更なし) ...
+	tradingHandler := handler.NewTradingHandler(tradingUsecase, logger)
+
+	http.HandleFunc("/trade", tradingHandler.HandleTrade)
+	logger.Info("Starting server on port :8080")
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	srv := &http.Server{
+		Addr:    ":8080",
+		Handler: http.DefaultServeMux,
+	}
+
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Fatal("Failed to start server", zap.Error(err))
+		}
+	}()
+
+	<-ctx.Done()
+	logger.Info("Shutting down server...")
+
+	if err := eventStream.Stop(); err != nil {
+		logger.Error("Failed to stop EventStream", zap.Error(err))
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(ctx); err != nil {
+		logger.Fatal("Server forced to shutdown:", zap.Error(err))
+	}
+
+	logger.Info("Server exiting")
 }

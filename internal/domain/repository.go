@@ -10,6 +10,7 @@ type OrderRepository interface {
 	GetOrder(ctx context.Context, id string) (*Order, error)
 	UpdateOrder(ctx context.Context, order *Order) error
 	// 他の必要なメソッド (例: CancelOrder, GetOrdersByStatus, etc.)
+	UpdateOrderStatus(ctx context.Context, orderID string, status string) error
 }
 
 // 取引アカウント（Account）データの永続化操作を抽象化

@@ -1,3 +1,4 @@
+// internal/config/config.go
 package config
 
 import (
@@ -7,31 +8,31 @@ import (
 	"github.com/joho/godotenv"
 )
 
-// 環境変数から設定情報を読み込む機能
-
-// 設定情報を保持
 type Config struct {
 	TachibanaAPIKey    string
 	TachibanaAPISecret string
-	TachibanaBaseURL   string // Base URL を追加
+	TachibanaBaseURL   string
 	DBHost             string
 	DBPort             int
 	DBUser             string
 	DBPassword         string
 	DBName             string
-	LogLevel           string // ログレベルを追加
+	LogLevel           string
+	// --- ここから修正 ---
+	// EVENT I/F 接続用パラメータ追加
+	EventRid     string // p_rid
+	EventBoardNo string // p_board_no
+	EventEvtCmd  string // p_evt_cmd
+	// --- ここまで修正 ---
 }
 
-// .env ファイルから環境変数を読み込み、Config 構造体に格納して返す
 func LoadConfig(envPath string) (*Config, error) {
-	// .envファイルから環境変数を読み込む
 	err := godotenv.Load(envPath)
 	if err != nil {
-		//.envがなくても続行。システム環境変数を使用するため
-		//return nil, err // エラーを返さない
+		// .envがなくても続行。システム環境変数を使用するため
+		// return nil, err
 	}
 
-	// 環境変数から設定値を読み込む
 	port, err := strconv.Atoi(os.Getenv("DB_PORT"))
 	if err != nil {
 		return nil, err
@@ -40,12 +41,18 @@ func LoadConfig(envPath string) (*Config, error) {
 	return &Config{
 		TachibanaAPIKey:    os.Getenv("TACHIBANA_API_KEY"),
 		TachibanaAPISecret: os.Getenv("TACHIBANA_API_SECRET"),
-		TachibanaBaseURL:   os.Getenv("TACHIBANA_BASE_URL"), // Base URL を追加
+		TachibanaBaseURL:   os.Getenv("TACHIBANA_BASE_URL"), // "https://kabuka.e-shiten.jp/e_api_v4r5" など
 		DBHost:             os.Getenv("DB_HOST"),
 		DBPort:             port,
 		DBUser:             os.Getenv("DB_USER"),
 		DBPassword:         os.Getenv("DB_PASSWORD"),
 		DBName:             os.Getenv("DB_NAME"),
 		LogLevel:           os.Getenv("LOG_LEVEL"), // 環境変数からログレベルを取得
+		// --- ここから修正 ---
+		// EVENT I/F 接続用パラメータ
+		EventRid:     os.Getenv("EVENT_RID"),      // 例: "0"
+		EventBoardNo: os.Getenv("EVENT_BOARD_NO"), // 例: "1000"
+		EventEvtCmd:  os.Getenv("EVENT_EVT_CMD"),  // 例: "ST,KP,EC,SS,US"
+		// --- ここまで修正 ---
 	}, nil
 }

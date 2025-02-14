@@ -1,3 +1,4 @@
+// internal/domain/model.go
 package domain
 
 import "time"
@@ -23,6 +24,8 @@ type Account struct {
 	ID        string
 	Balance   float64
 	Positions []Position // ポジションのリスト
+	CreatedAt time.Time  // 追加
+	UpdatedAt time.Time  // 追加
 }
 
 // 保有株

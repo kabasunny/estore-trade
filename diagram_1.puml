@@ -1,0 +1,232 @@
+@startuml
+top to bottom direction
+
+skinparam packageTitleFontColor #ffffff
+skinparam packageTitleBackgroundColor #2E4372
+skinparam packageBorderColor #2E4372
+skinparam packageBorderThickness 1
+skinparam packageTitleFontSize 14
+skinparam packageFontSize 13
+skinparam defaultFontName "Meiryo"
+skinparam classFontSize 12
+skinparam classAttributeIconSize 0
+skinparam legendFontSize 12
+
+skinparam interface {
+  BackgroundColor #CCFFFF
+  FontStyle Bold
+  BorderColor #3399ff
+}
+skinparam class {
+  BackgroundColor #FFFFFF
+}
+
+class "main.go" as main {
+}
+
+package "internal/config" {
+  class "config.go" as config {
+    +LoadConfig() *Config
+  }
+  class Config {
+    +TachibanaAPIKey : string
+    +TachibanaAPISecret : string
+    +TachibanaBaseURL : string
+    +DBHost : string
+    +DBPort : int
+    +DBUser : string
+    +DBPassword : string
+    +DBName : string
+    +LogLevel : string
+    +EventRid : string
+    +EventBoardNo : string
+    +EventEvtCmd : string
+  }
+}
+
+package "internal/domain" {
+  class "model.go" as model
+
+  class Order
+  class Account
+  class Position
+  class OrderEvent
+
+  interface OrderRepository
+  interface AccountRepository
+  class "repository.go" as repository
+}
+
+package "internal/handler" {
+  class "trading.go" as handler {
+    +NewTradingHandler() *TradingHandler
+    +HandleTrade()
+  }
+  class TradingHandler {
+    -tradingUsecase : usecase.TradingUsecase
+    -logger : *zap.Logger
+  }
+}
+
+package "internal/infrastructure/database/postgres" {
+  class "postgres.go" as postgres {
+    +NewPostgresDB() *PostgresDB
+    +Close() error
+    +DB() *sql.DB
+  }
+  class PostgresDB {
+    -db : *sql.DB
+    -logger : *zap.Logger
+  }
+}
+
+package "internal/infrastructure/logger/zapLogger" {
+  class "zapLogger.go" as zapLogger {
+    +NewZapLogger() *zap.Logger
+  }
+}
+
+package "internal/infrastructure/persistence" {
+  class "order_repository.go" as orderRepoImpl {
+    +NewOrderRepository() domain.OrderRepository
+    +CreateOrder() error
+    +GetOrder() (*Order, error)
+    +UpdateOrder() error
+    +UpdateOrderStatus() error
+  }
+
+  class "account_repository.go" as accountRepoImpl {
+    +NewAccountRepository() domain.AccountRepository
+    +GetAccount() (*Account, error)
+    +UpdateAccount() error
+  }
+
+  package "tachibana" {
+    class "tachibana_client.go" as tachibanaClient {
+      +Login() (string, error)
+      +PlaceOrder() (*Order, error)
+      +GetOrderStatus() (*Order, error)
+      +CancelOrder() error
+      +ConnectEventStream() (<-chan *OrderEvent, error)
+    }
+
+    interface TachibanaClient
+
+    class "tachibana_client_impl.go" as tachibanaClientImpl {
+      +NewTachibanaClient() TachibanaClient
+      +Login() (string, error)
+      +PlaceOrder() (*Order, error)
+      +GetOrderStatus() (*Order, error)
+      +CancelOrder() error
+      +ConnectEventStream(context.Context) (<-chan *domain.OrderEvent, error)
+    }
+
+    class TachibanaClientIntImple {
+      -baseURL : *url.URL
+      -apiKey : string
+      -secret : string
+      -logger : *zap.Logger
+      -requestURL : string
+      -expiry : time.Time
+      -mu : sync.RWMutex
+    }
+
+    class "event_stream.go" as eventStream {
+      +NewEventStream() *EventStream
+      +Start() error
+      +Stop() error
+      +parseEvent() (*OrderEvent, error)
+      +sendEvent()
+    }
+    class EventStream {
+      -tachibanaClient : TachibanaClient
+      -config : *Config
+      -logger : *zap.Logger
+      -eventCh : chan<- *OrderEvent
+      -stopCh : chan struct{}
+      -conn : *http.Client
+      -req : *http.Request
+    }
+  }
+}
+
+package "internal/usecase" {
+  interface TradingUsecase
+
+  class "trading.go" as usecase {
+    +GetEventChannelReader() <-chan *OrderEvent
+    +GetEventChannelWriter() chan<- *OrderEvent
+    +HandleOrderEvent()
+  }
+
+  class "trading_impl.go" as tradingImpl {
+    +NewTradingUsecase() *TradingUsecase
+    +PlaceOrder() (*Order, error)
+    +GetOrderStatus() (*Order, error)
+    +CancelOrder() error
+    +GetEventChannelReader() <-chan *OrderEvent
+    +GetEventChannelWriter() chan<- *domain.OrderEvent
+    +HandleOrderEvent() error
+  }
+  class tradingUsecase {
+    -tachibanaClient : tachibana.TachibanaClient
+    -logger : *zap.Logger
+    -orderRepo : domain.OrderRepository
+    -accountRepo : domain.AccountRepository
+    -eventCh : chan *OrderEvent
+  }
+}
+
+main -[#blue,dashed]-> config : uses
+main -[#blue,dashed]-> zapLogger : uses
+main -[#blue,dashed]-> postgres : uses
+main -[#blue,dashed]-> tachibanaClientImpl : uses
+main -[#blue,dashed]-> orderRepoImpl : uses
+main -[#blue,dashed]-> accountRepoImpl : uses
+main -[#blue,dashed]-> tradingImpl : uses
+main -[#blue,dashed]-> eventStream : uses
+main -[#blue,dashed]-> handler : uses
+
+handler -[#blue,dashed]-> tradingImpl : uses
+
+tradingImpl .[#green,dotted]|> TradingUsecase
+
+tradingImpl -[#blue,dashed]-> tachibanaClientImpl : uses
+tradingImpl -[#blue,dashed]-> orderRepoImpl : uses
+tradingImpl -[#blue,dashed]-> accountRepoImpl : uses
+
+tachibanaClientImpl .[#green,dotted]|> TachibanaClient
+tachibanaClientImpl -[#blue,dashed]-> config : uses
+tachibanaClientImpl -[#blue,dashed]-> zapLogger : uses
+
+eventStream -[#blue,dashed]-> config : uses
+eventStream -[#blue,dashed]-> zapLogger : uses
+eventStream -[#blue,dashed]-> tachibanaClientImpl : uses
+eventStream -[#blue,dashed]-> tradingImpl : "sends events"
+
+orderRepoImpl .[#green,dotted]|> OrderRepository
+accountRepoImpl .[#green,dotted]|> AccountRepository
+
+postgres -[#blue,dashed]-> config : uses
+postgres -[#blue,dashed]-> zapLogger : uses
+
+zapLogger -[#blue,dashed]-> config : uses
+
+config -- Config
+model -- Order
+model -- Account
+model -- Position
+model -- OrderEvent
+
+usecase.TradingUsecase -[#red,plain]-> OrderRepository : uses
+usecase.TradingUsecase -[#red,plain]-> AccountRepository: uses
+
+legend
+  |= Symbol |= Type |= Description |
+  |<#lightblue>| Main | main.goの依存関係|
+  |<#lightgreen>| Implementation | インターフェースの実装 |
+  |<#red>       | Interface Usage| インターフェースの利用 |
+  |<#blue,dashed>| Uses | 依存関係 (点線) |
+end legend
+@enduml
+
