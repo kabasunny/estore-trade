@@ -1,1 +1,5 @@
 .env
+
+output/
+
+list_files_with_content.py
