@@ -1,3 +1,4 @@
+// internal/infrastructure/persistence/tachibana/tachibana_client.go
 package tachibana
 
 import (
@@ -20,4 +21,11 @@ type TachibanaClient interface {
 	CancelOrder(ctx context.Context, requestURL string, orderID string) error
 
 	ConnectEventStream(ctx context.Context) (<-chan *domain.OrderEvent, error) // OrderEventチャネル
+
+	DownloadMasterData(ctx context.Context, requestURL string) error // マスタデータダウンロード
+
+	GetSystemStatus() SystemStatus                       // 追加: SystemStatus を返す
+	GetDateInfo() DateInfo                               // 追加
+	GetCallPrice(unitNumber string) (CallPrice, bool)    // 追加
+	GetIssueMaster(issueCode string) (IssueMaster, bool) // 追加
 }

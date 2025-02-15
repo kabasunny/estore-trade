@@ -119,6 +119,8 @@ package "internal/infrastructure/persistence" {
       +GetOrderStatus() (*Order, error)
       +CancelOrder() error
       +ConnectEventStream(context.Context) (<-chan *domain.OrderEvent, error)
+      +getPNo() string                                                    
+      +formatSDDate(t time.Time) string                                  
     }
 
     class TachibanaClientIntImple {
@@ -129,6 +131,8 @@ package "internal/infrastructure/persistence" {
       -requestURL : string
       -expiry : time.Time
       -mu : sync.RWMutex
+      -pNo        : int64       
+      -pNoMu      : sync.Mutex  
     }
 
     class "event_stream.go" as eventStream {
@@ -229,4 +233,3 @@ legend
   |<#blue,dashed>| Uses | 依存関係 (点線) |
 end legend
 @enduml
-

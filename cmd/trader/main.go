@@ -22,7 +22,6 @@ import (
 )
 
 func main() {
-	// ... (設定の読み込み、ロガー、DB接続、APIクライアントの初期化は変更なし) ...
 	cfg, err := config.LoadConfig(".env")
 	if err != nil {
 		log.Fatalf("設定ファイルの読み込みに失敗: %v", err)
@@ -42,6 +41,18 @@ func main() {
 	defer db.Close()
 
 	tachibanaClient := tachibana.NewTachibanaClient(cfg, logger)
+
+	// マスタデータダウンロード (Login の後)
+	requestURL, err := tachibanaClient.Login(context.Background(), "your_user_id", "your_password") // 要修正
+	if err != nil {
+		logger.Fatal("Failed to login to Tachibana API", zap.Error(err))
+		return
+	}
+	if err := tachibanaClient.DownloadMasterData(context.Background(), requestURL); err != nil {
+		logger.Fatal("Failed to download master data", zap.Error(err))
+		return
+	}
+	logger.Info("Master data downloaded successfully")
 
 	// リポジトリの初期化
 	orderRepo := persistence.NewOrderRepository(db.DB())
@@ -67,7 +78,6 @@ func main() {
 		}
 	}()
 
-	// ... (HTTPハンドラ、サーバー起動、シグナルハンドリングは変更なし) ...
 	tradingHandler := handler.NewTradingHandler(tradingUsecase, logger)
 
 	http.HandleFunc("/trade", tradingHandler.HandleTrade)
