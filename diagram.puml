@@ -102,26 +102,35 @@ package "internal/infrastructure/persistence" {
   }
 
   package "tachibana" {
-    class "tachibana_client.go" as tachibanaClient {
-      +Login() (string, error)
-      +PlaceOrder() (*Order, error)
-      +GetOrderStatus() (*Order, error)
-      +CancelOrder() error
-      +ConnectEventStream() (<-chan *OrderEvent, error)
-    }
-
     interface TachibanaClient
 
-    class "tachibana_client_impl.go" as tachibanaClientImpl {
+    class "tachibana_client.go" as tachibanaClient
+      
+    class "client_core.go" as clientCore {
       +NewTachibanaClient() TachibanaClient
       +Login() (string, error)
-      +PlaceOrder() (*Order, error)
-      +GetOrderStatus() (*Order, error)
-      +CancelOrder() error
-      +ConnectEventStream(context.Context) (<-chan *domain.OrderEvent, error)
-      +getPNo() string                                                    
-      +formatSDDate(t time.Time) string                                  
+      +getPNo() string
+      +sendRequest() (map[string]interface{}, error)
+      +ConnectEventStream() (<-chan *domain.OrderEvent, error)
     }
+
+     class "client_login.go" as clientLogin {
+        +login() (string, error)
+     }
+     class "client_order.go" as clientOrder {
+        +PlaceOrder() (*domain.Order, error)
+        +GetOrderStatus() (*domain.Order, error)
+        +CancelOrder() error
+     }
+
+     class "client_master_data.go" as clientMasterData{
+        +DownloadMasterData() error
+        +GetSystemStatus() SystemStatus
+        +GetDateInfo() DateInfo
+        +GetCallPrice(unitNumber string) (CallPrice, bool)
+        +GetIssueMaster(issueCode string) (IssueMaster, bool)
+        +mapToStruct() error
+     }
 
     class TachibanaClientIntImple {
       -baseURL : *url.URL
@@ -133,24 +142,31 @@ package "internal/infrastructure/persistence" {
       -mu : sync.RWMutex
       -pNo        : int64       
       -pNoMu      : sync.Mutex  
+      -systemStatus SystemStatus
+      -dateInfo     DateInfo
+      -callPriceMap map[string]CallPrice
+      -issueMap     map[string]IssueMaster
     }
 
     class "event_stream.go" as eventStream {
       +NewEventStream() *EventStream
       +Start() error
       +Stop() error
-      +parseEvent() (*OrderEvent, error)
+      +parseEvent() (*domain.OrderEvent, error)
       +sendEvent()
     }
     class EventStream {
       -tachibanaClient : TachibanaClient
-      -config : *Config
+      -config : *config.Config
       -logger : *zap.Logger
-      -eventCh : chan<- *OrderEvent
+      -eventCh : chan<- *domain.OrderEvent
       -stopCh : chan struct{}
       -conn : *http.Client
       -req : *http.Request
     }
+    class "constants.go" as constants
+    class "master.go" as master
+    class "utils.go" as utils
   }
 }
 
@@ -158,17 +174,17 @@ package "internal/usecase" {
   interface TradingUsecase
 
   class "trading.go" as usecase {
-    +GetEventChannelReader() <-chan *OrderEvent
-    +GetEventChannelWriter() chan<- *OrderEvent
-    +HandleOrderEvent()
+    +GetEventChannelReader() <-chan *domain.OrderEvent
+    +GetEventChannelWriter() chan<- *domain.OrderEvent
+    +HandleOrderEvent() error
   }
 
   class "trading_impl.go" as tradingImpl {
-    +NewTradingUsecase() *TradingUsecase
-    +PlaceOrder() (*Order, error)
-    +GetOrderStatus() (*Order, error)
+    +NewTradingUsecase() TradingUsecase
+    +PlaceOrder() (*domain.Order, error)
+    +GetOrderStatus() (*domain.Order, error)
     +CancelOrder() error
-    +GetEventChannelReader() <-chan *OrderEvent
+    +GetEventChannelReader() <-chan *domain.OrderEvent
     +GetEventChannelWriter() chan<- *domain.OrderEvent
     +HandleOrderEvent() error
   }
@@ -177,14 +193,14 @@ package "internal/usecase" {
     -logger : *zap.Logger
     -orderRepo : domain.OrderRepository
     -accountRepo : domain.AccountRepository
-    -eventCh : chan *OrderEvent
+    -eventCh : chan *domain.OrderEvent
   }
 }
 
 main -[#blue,dashed]-> config : uses
 main -[#blue,dashed]-> zapLogger : uses
 main -[#blue,dashed]-> postgres : uses
-main -[#blue,dashed]-> tachibanaClientImpl : uses
+main -[#blue,dashed]-> clientCore : uses
 main -[#blue,dashed]-> orderRepoImpl : uses
 main -[#blue,dashed]-> accountRepoImpl : uses
 main -[#blue,dashed]-> tradingImpl : uses
@@ -195,17 +211,20 @@ handler -[#blue,dashed]-> tradingImpl : uses
 
 tradingImpl .[#green,dotted]|> TradingUsecase
 
-tradingImpl -[#blue,dashed]-> tachibanaClientImpl : uses
+tradingImpl -[#blue,dashed]-> clientCore : uses
 tradingImpl -[#blue,dashed]-> orderRepoImpl : uses
 tradingImpl -[#blue,dashed]-> accountRepoImpl : uses
 
-tachibanaClientImpl .[#green,dotted]|> TachibanaClient
-tachibanaClientImpl -[#blue,dashed]-> config : uses
-tachibanaClientImpl -[#blue,dashed]-> zapLogger : uses
+clientCore .[#green,dotted]|> TachibanaClient
+clientCore -[#blue,dashed]-> config : uses
+clientCore -[#blue,dashed]-> zapLogger : uses
+clientLogin -[#blue,dashed]-> clientCore : uses
+clientOrder -[#blue,dashed]-> clientCore : uses
+clientMasterData -[#blue,dashed]-> clientCore : uses
 
 eventStream -[#blue,dashed]-> config : uses
 eventStream -[#blue,dashed]-> zapLogger : uses
-eventStream -[#blue,dashed]-> tachibanaClientImpl : uses
+eventStream -[#blue,dashed]-> clientCore : uses
 eventStream -[#blue,dashed]-> tradingImpl : "sends events"
 
 orderRepoImpl .[#green,dotted]|> OrderRepository
@@ -221,6 +240,7 @@ model -- Order
 model -- Account
 model -- Position
 model -- OrderEvent
+tachibanaClient -[#green,dotted] TachibanaClient
 
 usecase.TradingUsecase -[#red,plain]-> OrderRepository : uses
 usecase.TradingUsecase -[#red,plain]-> AccountRepository: uses
