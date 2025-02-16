@@ -20,7 +20,7 @@ import (
 	"golang.org/x/text/transform"
 )
 
-type TachibanaClientIntImple struct {
+type TachibanaClientImple struct {
 	baseURL    *url.URL
 	apiKey     string
 	secret     string
@@ -43,7 +43,7 @@ func NewTachibanaClient(cfg *config.Config, logger *zap.Logger) TachibanaClient 
 		logger.Fatal("Invalid Tachibana API base URL", zap.Error(err))
 		return nil
 	}
-	return &TachibanaClientIntImple{
+	return &TachibanaClientImple{
 		baseURL:      parsedURL,
 		apiKey:       cfg.TachibanaAPIKey,
 		secret:       cfg.TachibanaAPISecret,
@@ -55,7 +55,7 @@ func NewTachibanaClient(cfg *config.Config, logger *zap.Logger) TachibanaClient 
 }
 
 // Login は API にログインし、仮想URLを返す。有効期限内ならキャッシュされたURLを返す
-func (tc *TachibanaClientIntImple) Login(ctx context.Context, userID, password string) (string, error) {
+func (tc *TachibanaClientImple) Login(ctx context.Context, userID, password string) (string, error) {
 	// Read Lock: キャッシュされたURLが有効ならそれを返す
 	tc.mu.RLock()
 	if time.Now().Before(tc.expiry) && tc.requestURL != "" {
@@ -76,7 +76,7 @@ func (tc *TachibanaClientIntImple) Login(ctx context.Context, userID, password s
 }
 
 // getPNo は p_no を取得し、インクリメントする (スレッドセーフ)
-func (tc *TachibanaClientIntImple) getPNo() string {
+func (tc *TachibanaClientImple) getPNo() string {
 	tc.pNoMu.Lock()
 	defer tc.pNoMu.Unlock()
 	tc.pNo++
@@ -84,12 +84,12 @@ func (tc *TachibanaClientIntImple) getPNo() string {
 }
 
 // ConnectEventStream は、EVENT I/F への接続を確立し、受信したイベントをチャネルに流す
-func (tc *TachibanaClientIntImple) ConnectEventStream(ctx context.Context) (<-chan *domain.OrderEvent, error) {
+func (tc *TachibanaClientImple) ConnectEventStream(ctx context.Context) (<-chan *domain.OrderEvent, error) {
 	//  EventStream 構造体を使うように変更
 	return nil, fmt.Errorf("ConnectEventStream method should be implemented in event_stream.go")
 }
 
-func sendRequest(ctx context.Context, tc *TachibanaClientIntImple, requestURL string, payload interface{}) (map[string]interface{}, error) {
+func sendRequest(ctx context.Context, tc *TachibanaClientImple, requestURL string, payload interface{}) (map[string]interface{}, error) {
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
 		tc.logger.Error("ペイロードのJSONエンコードに失敗", zap.Error(err))

@@ -15,7 +15,7 @@ import (
 	"golang.org/x/text/transform"
 )
 
-func login(ctx context.Context, tc *TachibanaClientIntImple, userID, password string) (string, error) {
+func login(ctx context.Context, tc *TachibanaClientImple, userID, password string) (string, error) {
 	// リトライ処理 (最大3回、間隔は2秒から開始して指数関数的に増加)
 	var resp *http.Response
 	var err error

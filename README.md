@@ -16,6 +16,9 @@
     *   注文情報などをデータベースに保存し、後で参照できる
 *   **ログ記録:**
     *   プログラムの動作状況（エラー、注文成功など）を詳細に記録する
+*   **自動売買:**
+    *   市場の状況を分析して自動的に売買の判断をする
+    *   あらかじめ設定された戦略に基づいて、自動で注文を出す
 
 ## 処理フロー
 
@@ -39,7 +42,7 @@
 5.  **リアルタイムイベント受信の準備:**
     *   立花証券システムからのイベントを受信するための「イベントストリーム」を準備する
     *   イベントストリームを開始し、イベント受信待機状態にする
-    *   受信したイベントは取引ユースケースに送られ、適切な処理が行われる
+    *   受信したイベントは取引ユースケース、自動売買ユースケースに送られ、適切な処理が行われる
 
 6.  **Webサーバー起動:**
     *   外部からの注文リクエストを受け付けるWebサーバーを起動する（`/trade` エンドポイントで注文を受け付け）
@@ -52,7 +55,13 @@
     *   注文成功後、注文情報をデータベースに保存する
     *   注文結果をWebブラウザに返す
 
-8.  **プログラム終了処理:**
+8.  **自動売買機能:**
+    *   5で受け付けた情報をもとに、自動売買の処理を行う
+    *   売買の判断に必要な情報を集め、売買のシグナルを出す
+    *   リスク管理などをした上で、注文情報を決定する
+    *   取引ユースケースを用いて、立花証券に注文を発注
+
+9.  **プログラム終了処理:**
     *   プログラム終了指示（Ctrl+Cなど）を受け取ると、以下の処理を行う
         *   イベントストリームを停止する
         *   Webサーバーを停止する
@@ -67,8 +76,6 @@
 *   **ゴルーチン:** イベント受信やWebサーバー処理など、時間のかかる処理を他の処理と並行して実行し、プログラム全体の応答性を向上させている
 *   **Long Polling:** イベントストリームで利用されている、サーバーからクライアントへ情報をプッシュする技術である
 
-
-
 #### ディレクトリ構造と各ファイルの役割概要
 
 - **cmd/**
@@ -78,15 +85,15 @@
     - **main.go**
       - **目的:** プログラムのエントリーポイント
       - **処理概要:**
-        - 設定の読み込み (`config.LoadConfig`)
-        - ロガーの初期化 (`zapLogger.NewZapLogger`)
-        - データベース接続の確立 (`postgres.NewPostgresDB`)
+        - 設定の読み込み (config.LoadConfig)
+        - ロガーの初期化 (zapLogger.NewZapLogger)
+        - データベース接続の確立 (postgres.NewPostgresDB)
         - OrderRepository と AccountRepository のインスタンス生成
-        - 立花証券APIクライアントの初期化 (`tachibana.NewTachibanaClient`)
-        - ユースケース層の初期化 (`usecase.NewTradingUsecase`): APIクライアント、ロガー、リポジトリを注入
+        - 立花証券APIクライアントの初期化 (tachibana.NewTachibanaClient)
+        - ユースケース層の初期化 (usecase.NewTradingUsecase, autotrading.NewAutoTradingUsecase): APIクライアント、ロガー、リポジトリを注入
         - EventStream の初期化と起動: usecase 層から書き込み専用チャネルを取得して渡す
-        - EventStream からのイベントを処理するゴルーチンの起動: usecase 層から読み取り専用チャネルを取得して使用
-        - HTTPハンドラの初期化 (`handler.NewTradingHandler`): ユースケースとロガーを注入
+        - AutoTradingUsecaseの初期化と起動: usecase層から読み取り専用チャネルを取得して、自動売買を開始
+        - HTTPハンドラの初期化 (handler.NewTradingHandler): ユースケースとロガーを注入
         - HTTPサーバーの起動 (APIエンドポイント `/trade` を設定)
         - シグナルハンドリング (Graceful Shutdown)
 
@@ -97,7 +104,7 @@
     - **config.go**
       - **目的:** 環境変数から設定情報を読み込み、`Config` 構造体に格納
       - **処理概要:**
-        - `.env` ファイル（存在する場合）を読み込む (`godotenv.Load`)
+        - .env ファイル（存在する場合）を読み込む (godotenv.Load)
         - 環境変数から必要な設定値（APIキー、DB接続情報、ログレベルなど）を取得し、`Config` 構造体を作成して返す
   - **domain/**
     - **目的:** ビジネスロジックの中核となるエンティティ（データ構造）とリポジトリインターフェースを定義
@@ -157,31 +164,31 @@
           - **目的:** 立花証券APIとのインターフェースを定義(抽象化)
           - **処理概要:** `TachibanaClient` インターフェースを定義し、APIとのやり取りに必要なメソッド（`Login`, `PlaceOrder`, `GetOrderStatus`, `CancelOrder`, `ConnectEventStream`）を宣言
         - **client_core.go**
-          - **目的:** `TachibanaClientIntImple` 構造体のコア機能（リクエスト送信、共通処理）
+          - **目的:** `TachibanaClientImple` 構造体のコア機能（リクエスト送信、共通処理）
           - **処理概要:**
-            - `TachibanaClientIntImple` 構造体: APIクライアントの基本情報（ベースURL, APIキー, シークレットキー, ロガー, リクエストURL, 有効期限, 排他制御用ミューテックス, `p_no` 管理）と、マスターデータ（システムステータス、日付情報、呼値、銘柄情報）を保持。
-            - `NewTachibanaClient`: `TachibanaClientIntImple` のインスタンスを生成。
-            - `Login`:  APIへのログイン処理。キャッシュされたリクエストURLの有効性を確認し、有効であればそれを返す。無効であれば、`client_login.go` の `login` 関数を呼び出して認証処理を行う。
-            - `getPNo`: スレッドセーフに `p_no` を取得・インクリメント。
-            - `ConnectEventStream`: `event_stream.go` で実装されるため、ここではエラーを返す。
-            - `sendRequest`: HTTPリクエストを送信し、レスポンスを処理する共通関数。リクエストのコンテキストとタイムアウト設定、Shift-JISからUTF-8へのデコードを含む。
+            - `TachibanaClientImple` 構造体: APIクライアントの基本情報（ベースURL, APIキー, シークレットキー, ロガー, リクエストURL, 有効期限, 排他制御用ミューテックス, `p_no` 管理）と、マスターデータ（システムステータス、日付情報、呼値、銘柄情報）を保持
+            - `NewTachibanaClient`: `TachibanaClientImple` のインスタンスを生成
+            - `Login`:  APIへのログイン処理。キャッシュされたリクエストURLの有効性を確認し、有効であればそれを返す。無効であれば、`client_login.go` の `login` 関数を呼び出して認証処理を行う
+            - `getPNo`: スレッドセーフに `p_no` を取得・インクリメント
+            - `ConnectEventStream`: `event_stream.go` で実装されるため、ここではエラーを返す
+            - `sendRequest`: HTTPリクエストを送信し、レスポンスを処理する共通関数。リクエストのコンテキストとタイムアウト設定、Shift-JISからUTF-8へのデコードを含む
         - **client_login.go**
           - **目的:** 立花証券APIのログイン処理に特化
           - **処理概要:**
-            - `login`: `client_core.go` の `Login` メソッドから呼び出され、実際のAPI認証処理を行う。リトライ処理、レスポンスのステータスコードチェック、Shift-JISからUTF-8への変換、`p_no` の初期値設定、リクエストURLのキャッシュなどを行う。
+            - `login`: `client_core.go` の `Login` メソッドから呼び出され、実際のAPI認証処理を行う。リトライ処理、レスポンスのステータスコードチェック、Shift-JISからUTF-8への変換、`p_no` の初期値設定、リクエストURLのキャッシュなどを行う
         - **client_order.go**
           - **目的:** 立花証券APIの注文関連処理（注文、注文状況取得、注文キャンセル）に特化
           - **処理概要:**
-            - `PlaceOrder`: 新しい注文を送信。リトライ処理、`p_no` と `p_sd_date` の設定、レスポンスのステータスコードチェック、Shift-JISからUTF-8への変換を行う。
-            - `GetOrderStatus`: 注文状況を取得。リトライ処理、`p_no` と `p_sd_date` の設定、レスポンスのステータスコードチェック、Shift-JISからUTF-8への変換を行う。
-            - `CancelOrder`: 注文をキャンセル。リトライ処理、`p_no` と `p_sd_date` の設定、レスポンスのステータスコードチェック、Shift-JISからUTF-8への変換を行う。
+            - `PlaceOrder`: 新しい注文を送信。リトライ処理、`p_no` と `p_sd_date` の設定、レスポンスのステータスコードチェック、Shift-JISからUTF-8への変換を行う
+            - `GetOrderStatus`: 注文状況を取得。リトライ処理、`p_no` と `p_sd_date` の設定、レスポンスのステータスコードチェック、Shift-JISからUTF-8への変換を行う
+            - `CancelOrder`: 注文をキャンセル。リトライ処理、`p_no` と `p_sd_date` の設定、レスポンスのステータスコードチェック、Shift-JISからUTF-8への変換を行う
         -  **client_master_data.go**
            - **目的:** 立花証券APIのマスターデータ関連処理(ダウンロード、データ保持、取得)
            - **処理概要:**
-             -  `masterDataManager` 構造体: マスターデータ(システムステータス、日付情報、呼値マップ、銘柄マップ)を保持
-             - `DownloadMasterData`: マスターデータをダウンロード。リクエストの作成、レスポンスの処理、`masterDataManager` へのデータ格納、`TachibanaClientIntImple` へのデータコピーを行う。
-             - `mapToStruct`: `map[string]interface{}` を構造体にマッピングする汎用関数。
-             - `GetSystemStatus`, `GetDateInfo`, `GetCallPrice`, `GetIssueMaster`: マスターデータのゲッターメソッド。
+             - `masterDataManager` 構造体: マスターデータ(システムステータス、日付情報、呼値マップ、銘柄マップ)を保持
+             - `DownloadMasterData`: マスターデータをダウンロード。リクエストの作成、レスポンスの処理、`masterDataManager` へのデータ格納、`TachibanaClientImple` へのデータコピーを行う
+             - `mapToStruct`: `map[string]interface{}` を構造体にマッピングする汎用関数
+             - `GetSystemStatus`, `GetDateInfo`, `GetCallPrice`, `GetIssueMaster`: マスターデータのゲッターメソッド
         - **event_stream.go**
           - **目的:** `EventStream` 構造体を定義
           - **処理概要:**
@@ -202,7 +209,7 @@
           - `sendEvent` メソッドで `eventCh` を通じて usecase 層にイベントを送信
          - **master.go**
            - **目的:** 立花証券APIから取得する各種マスターデータの構造体を定義
-           -　**処理概要:**
+           - **処理概要:**
              - `SystemStatus`: システムステータス
              - `DateInfo`: 日付情報
              - `CallPrice`: 呼値
@@ -210,28 +217,45 @@
              - `OperationStatus`: 運用ステータス(未使用)
         - **constants.go**
           - **目的:** 立花証券APIに関連する定数を定義
-          - **処理概要:** APIのエンドポイント識別子(`sCLMID`)、取引関連の定数などを定義。
+          - **処理概要:** APIのエンドポイント識別子(`sCLMID`)、取引関連の定数などを定義
         - **utils.go**
-           -　**目的:** ユーティリティ関数を定義
+           - **目的:** ユーティリティ関数を定義
            - **処理概要:**
              - `formatSDDate`: 日付フォーマット関数
              - `withContextAndTimeout`: HTTPリクエストにコンテキストとタイムアウトを設定
              - `retryDo`: HTTPリクエストのリトライ処理 (未使用)
              - `isValidPrice`: 注文価格が呼値の単位に従っているかチェック
-
+  - **autotrading/**
+    - **目的:** アプリケーションの自動売買に関するビジネスロジックの実装
+    - **autotrading.go**
+      - **目的:** 自動売買に関するビジネスロジックのインターフェースを定義
+      - **処理概要:** `AutoTradingUsecase` インターフェースを定義。`Start`（自動売買開始）、`Stop`（自動売買停止）、`HandleEvent`（イベント処理）などのメソッドを持つ。
+    - **autotrading_impl.go**
+      - **目的:**　`AutoTradingUsecase` インターフェースの実装
+      - **処理概要:**
+        - `autoTradingUsecase` 構造体を定義
+        - `NewAutoTradingUsecase` 関数で、`autoTradingUsecase` のインスタンスを生成(既存の `TradingUsecase`、`AutoTradingAlgorithm`、`Logger`、リポジトリ、イベント受信用チャネルを注入)
+        - `Start`メソッドで、イベント受信用チャネルからのメッセージを処理するためのゴルーチンを起動
+        - `HandleEvent`メソッドで、受け取ったイベントに応じた処理(自動売買アルゴリズムの呼び出し、シグナル生成、ポジション計算、`TradingUsecase` を利用した注文実行)を行う
+        - `AutoTradingAlgorithm` 構造体: 自動売買アルゴリズムのインターフェース(仮)
+          - `GenerateSignal`: シグナルを生成(仮)
+          - `CalculatePosition`: ポジションを計算(仮)
+        - `Signal` 構造体: シグナルの情報(仮)
+          - `ShouldTrade`: シグナルに基づいて取引を行うか判断するロジック(仮)
+        -  `Position` 構造体(仮)
 - **usecase/**
     - **目的:** アプリケーションのビジネスロジックの実装
     - **trading.go**
         -   **目的:** 取引に関するビジネスロジックのインターフェースを定義
-        -   **処理概要:**  `TradingUsecase` インターフェースを定義。`PlaceOrder`（注文）、`GetOrderStatus`（注文状況取得）、`CancelOrder`（注文キャンセル）、`GetEventChannelReader`（イベント受信用チャネル取得）、`GetEventChannelWriter`（イベント送信用チャネル取得）、`HandleOrderEvent`（イベント処理）などのメソッドを持つ。
+        -   **処理概要:**  `TradingUsecase` インターフェースを定義。`PlaceOrder`（注文）、`GetOrderStatus`（注文状況取得）、`CancelOrder`（注文キャンセル）、`GetEventChannelReader`（イベント受信用チャネル取得）、`GetEventChannelWriter`（イベント送信用チャネル取得）、`HandleOrderEvent`（イベント処理）などのメソッドを持つ
     - **trading_impl.go**
         -   **目的:** `TradingUsecase` インターフェースの実装
         -   **処理概要:**
-            -   `tradingUsecase` 構造体を定義。
-            -   `NewTradingUsecase` 関数で、`tradingUsecase` のインスタンスを生成（`TachibanaClient`、`Logger`、リポジトリを注入）。
-            -   `PlaceOrder`、`GetOrderStatus`、`CancelOrder` メソッドで、`TachibanaClient` を使用して立花証券APIを呼び出す。
-            -   `GetEventChannelReader`、`GetEventChannelWriter` メソッドで、イベントチャネルを返す。
-            -   `HandleOrderEvent` メソッドで、受け取ったイベントに応じた処理（データベースの更新など）を行う。
+            -   `tradingUsecase` 構造体を定義
+            -   `NewTradingUsecase` 関数で、`tradingUsecase` のインスタンスを生成（`TachibanaClient`、`Logger`、リポジトリを注入）
+            -   `PlaceOrder`、`GetOrderStatus`、`CancelOrder` メソッドで、`TachibanaClient` を使用して立花証券APIを呼び出す
+            -   `GetEventChannelReader`、`GetEventChannelWriter` メソッドで、イベントチャネルを返す
+            -   `HandleOrderEvent` メソッドで、受け取ったイベントに応じた処理（データベースの更新など）を行う
 
 estore-trade/
 │
@@ -245,13 +269,33 @@ estore-trade/
 │           ├── データベース接続の確立 (postgres.NewPostgresDB)
 │           ├── リポジトリの初期化 (persistence.NewOrderRepository, persistence.NewAccountRepository)
 │           ├── 外部APIクライアントの初期化 (tachibana.NewTachibanaClient)
-│           ├── ユースケース層の初期化 (usecase.NewTradingUsecase)
+│           ├── ユースケース層の初期化 (usecase.NewTradingUsecase, autotrading.NewAutoTradingUsecase)
 │           ├── EventStream の初期化と起動 (tachibana.NewEventStream)
-│           ├── EventStream からのイベントを処理するゴルーチンの起動
+│           ├── AutoTradingUsecase の初期化と起動
 │           ├── HTTPハンドラの初期化 (handler.NewTradingHandler)
 │           └── HTTPサーバーの起動とシグナルハンドリング (Graceful Shutdown)
 │
 ├── internal/ # このアプリケーション内でのみ使用されるコードを格納
+│   │
+│   ├── autotrading/ # 自動売買機能
+│   │   │
+│   │   ├── autotrading.go # AutoTradingUsecase インターフェース
+│   │   │   └── AutoTradingUsecase
+│   │   │       ├── Start: 自動売買開始 (EventStream, シグナル, 注文)
+│   │   │       ├── Stop: 自動売買停止
+│   │   │       └── HandleEvent: イベント処理
+│   │   │
+│   │   └── autotrading_impl.go # AutoTradingUsecase 実装
+│   │       ├── autoTradingUsecase 構造体
+│   │       ├── NewAutoTradingUsecase: インスタンス作成 (TradingUsecase, アルゴリズム, Logger, Config, EventCh)
+│   │       ├── Start: EventStreamからのデータ受信、シグナル生成、注文実行
+│   │       ├── HandleEvent: イベント処理 (tradingUsecase 呼び出し)
+│   │       ├── AutoTradingAlgorithm 構造体 (アルゴリズムのインターフェース - 仮)
+│   │       │   ├── GenerateSignal: シグナル生成
+│   │       │   └── CalculatePosition: ポジション計算
+│   │       ├── Signal 構造体 (シグナル情報 - 仮)
+│   │       │   └── ShouldTrade: 取引判断ロジック
+│   │       └── Position 構造体 (ポジション情報 - 仮)
 │   │
 │   ├── config/ # 設定管理
 │   │   │
@@ -302,8 +346,8 @@ estore-trade/
 │   │       │
 │   │       └── tachibana/ # 立花証券APIクライアント
 │   │           │
-│   │           ├── client_core.go # TachibanaClientIntImple 構造体のコア機能
-│   │           │   ├── TachibanaClientIntImple 構造体: APIクライアント基本情報、マスターデータ保持
+│   │           ├── client_core.go # TachibanaClientImple 構造体のコア機能
+│   │           │   ├── TachibanaClientImple 構造体: APIクライアント基本情報、マスターデータ保持
 │   │           │   ├── NewTachibanaClient: インスタンス生成
 │   │           │   ├── Login: APIログイン、仮想URL取得 (キャッシュ、client_login.go 呼び出し)
 │   │           │   ├── getPNo: スレッドセーフな p_no 取得・インクリメント
@@ -320,7 +364,7 @@ estore-trade/
 │   │           │
 │   │           ├── client_master_data.go # 立花証券APIのマスターデータ関連処理
 │   │           │   ├── masterDataManager 構造体: マスターデータ一時保持
-│   │           │   ├── DownloadMasterData: ダウンロード、masterDataManager 格納、TachibanaClientIntImple へコピー
+│   │           │   ├── DownloadMasterData: ダウンロード、masterDataManager 格納、TachibanaClientImple へコピー
 │   │           │   ├── mapToStruct: map から構造体へのマッピング
 │   │           │   └── GetSystemStatus, GetDateInfo, GetCallPrice, GetIssueMaster: マスターデータ取得
 │   │           │

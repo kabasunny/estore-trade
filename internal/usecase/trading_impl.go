@@ -4,7 +4,7 @@ package usecase
 import (
 	"context"
 	"estore-trade/internal/domain"
-	"estore-trade/internal/infrastructure/persistence/tachibana" // ここに追加
+	"estore-trade/internal/infrastructure/persistence/tachibana"
 	"fmt"
 	"math"
 
@@ -16,7 +16,7 @@ type tradingUsecase struct {
 	logger          *zap.Logger
 	orderRepo       domain.OrderRepository
 	accountRepo     domain.AccountRepository
-	eventCh         chan *domain.OrderEvent // 修正: 双方向チャネル
+	eventCh         chan domain.OrderEvent // 修正: 双方向チャネル
 }
 
 func NewTradingUsecase(tachibanaClient tachibana.TachibanaClient, logger *zap.Logger, orderRepo domain.OrderRepository, accountRepo domain.AccountRepository) *tradingUsecase { // 修正: *TradingUsecase を返す
@@ -25,7 +25,7 @@ func NewTradingUsecase(tachibanaClient tachibana.TachibanaClient, logger *zap.Lo
 		logger:          logger,
 		orderRepo:       orderRepo,
 		accountRepo:     accountRepo,
-		eventCh:         make(chan *domain.OrderEvent), // チャネルの初期化
+		eventCh:         make(chan domain.OrderEvent), // チャネルの初期化
 	}
 }
 
@@ -133,12 +133,12 @@ func (uc *tradingUsecase) CancelOrder(ctx context.Context, userID, password stri
 }
 
 // GetEventChannelReader は、EventStreamからイベントを受け取るためのチャネル (読み取り専用) を返す
-func (uc *tradingUsecase) GetEventChannelReader() <-chan *domain.OrderEvent { // 修正
+func (uc *tradingUsecase) GetEventChannelReader() <-chan domain.OrderEvent { // 修正
 	return uc.eventCh
 }
 
 // GetEventChannelWriter は、EventStreamにイベントを送信するためのチャネル(書き込み専用)を返す
-func (uc *tradingUsecase) GetEventChannelWriter() chan<- *domain.OrderEvent { // 修正
+func (uc *tradingUsecase) GetEventChannelWriter() chan<- domain.OrderEvent { // 修正
 	return uc.eventCh
 }
 

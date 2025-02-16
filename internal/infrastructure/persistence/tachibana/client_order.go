@@ -13,7 +13,7 @@ import (
 )
 
 // PlaceOrder は API に対して新しい株式注文を行う
-func (tc *TachibanaClientIntImple) PlaceOrder(ctx context.Context, requestURL string, order *domain.Order) (*domain.Order, error) {
+func (tc *TachibanaClientImple) PlaceOrder(ctx context.Context, requestURL string, order *domain.Order) (*domain.Order, error) {
 	// リトライ処理
 	var err error
 	for retries := 0; retries < 3; retries++ {
@@ -60,7 +60,7 @@ func (tc *TachibanaClientIntImple) PlaceOrder(ctx context.Context, requestURL st
 	return nil, fmt.Errorf("place order failed after multiple retries: %w", err) // 最終的なエラー
 }
 
-func (tc *TachibanaClientIntImple) GetOrderStatus(ctx context.Context, requestURL string, orderID string) (*domain.Order, error) {
+func (tc *TachibanaClientImple) GetOrderStatus(ctx context.Context, requestURL string, orderID string) (*domain.Order, error) {
 	// リトライ処理
 	var err error
 	for retries := 0; retries < 3; retries++ {
@@ -98,7 +98,7 @@ func (tc *TachibanaClientIntImple) GetOrderStatus(ctx context.Context, requestUR
 	return nil, fmt.Errorf("get order status failed after multiple retries: %w", err) // 最終的なエラー
 }
 
-func (tc *TachibanaClientIntImple) CancelOrder(ctx context.Context, requestURL string, orderID string) error {
+func (tc *TachibanaClientImple) CancelOrder(ctx context.Context, requestURL string, orderID string) error {
 	// リトライ処理
 	var err error
 

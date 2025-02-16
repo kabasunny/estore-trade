@@ -24,7 +24,7 @@ type masterDataManager struct {
 	issueMap     map[string]IssueMaster // 銘柄マスタ（株式）(Key: 銘柄コード)
 }
 
-func (tc *TachibanaClientIntImple) DownloadMasterData(ctx context.Context, requestURL string) error {
+func (tc *TachibanaClientImple) DownloadMasterData(ctx context.Context, requestURL string) error {
 	payload := map[string]string{
 		"sCLMID":    clmidDownloadMasterData, // マスタデータダウンロード用のsCLMID
 		"p_no":      tc.getPNo(),
@@ -152,20 +152,20 @@ func mapToStruct(data map[string]interface{}, result interface{}) error {
 }
 
 // (追加) マスタデータへのアクセス用メソッド (Getter) の追加:
-func (tc *TachibanaClientIntImple) GetSystemStatus() SystemStatus {
+func (tc *TachibanaClientImple) GetSystemStatus() SystemStatus {
 	tc.mu.RLock()
 	defer tc.mu.RUnlock()
 	return tc.systemStatus
 }
 
-func (tc *TachibanaClientIntImple) GetDateInfo() DateInfo {
+func (tc *TachibanaClientImple) GetDateInfo() DateInfo {
 	tc.mu.RLock()
 	defer tc.mu.RUnlock()
 	return tc.dateInfo
 }
 
 // 呼値取得
-func (tc *TachibanaClientIntImple) GetCallPrice(unitNumber string) (CallPrice, bool) {
+func (tc *TachibanaClientImple) GetCallPrice(unitNumber string) (CallPrice, bool) {
 	tc.mu.RLock()
 	defer tc.mu.RUnlock()
 	callPrice, ok := tc.callPriceMap[unitNumber]
@@ -173,7 +173,7 @@ func (tc *TachibanaClientIntImple) GetCallPrice(unitNumber string) (CallPrice, b
 }
 
 // 銘柄情報取得
-func (tc *TachibanaClientIntImple) GetIssueMaster(issueCode string) (IssueMaster, bool) {
+func (tc *TachibanaClientImple) GetIssueMaster(issueCode string) (IssueMaster, bool) {
 	tc.mu.RLock()
 	defer tc.mu.RUnlock()
 	issue, ok := tc.issueMap[issueCode]

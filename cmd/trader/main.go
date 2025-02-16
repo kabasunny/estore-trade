@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"estore-trade/internal/autotrading" // 追加: autotrading パッケージをインポート
 	"estore-trade/internal/config"
 	"estore-trade/internal/handler"
 	"estore-trade/internal/infrastructure/database/postgres"
@@ -69,14 +70,13 @@ func main() {
 		}
 	}()
 
-	// EventStreamからのイベントを処理するゴルーチン (main.go 内に追加)
-	go func() {
-		for evt := range tradingUsecase.GetEventChannelReader() { // 修正: GetEventChannelReader() を使う
-			if err := tradingUsecase.HandleOrderEvent(context.Background(), evt); err != nil {
-				logger.Error("Failed to handle order event", zap.Error(err))
-			}
-		}
-	}()
+	// AutoTradingUsecase の初期化 (tradingUsecase, autoTradingAlgorithm, logger, config, eventCh を渡す)
+	//  EventStream からのイベントを処理するゴルーチンの起動: trading usecase 層から読み取り専用チャネルを取得して使用
+	autoTradingAlgorithm := &autotrading.AutoTradingAlgorithm{} // 実際のアルゴリズムのインスタンスを生成
+	autoTradingUsecase := autotrading.NewAutoTradingUsecase(tradingUsecase, autoTradingAlgorithm, logger, cfg, tradingUsecase.GetEventChannelReader())
+	go autoTradingUsecase.Start() // 自動売買を開始
+
+	// EventStreamからのイベントを処理するゴルーチン (main.go 内に追加) *削除*
 
 	tradingHandler := handler.NewTradingHandler(tradingUsecase, logger)
 

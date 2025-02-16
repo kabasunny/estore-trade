@@ -19,14 +19,14 @@ type EventStream struct {
 	tachibanaClient TachibanaClient
 	config          *config.Config
 	logger          *zap.Logger
-	eventCh         chan<- *domain.OrderEvent // 修正: 送信専用チャネル
-	stopCh          chan struct{}             // 停止シグナル用チャネル
-	conn            *http.Client              // HTTPクライアント(長時間のポーリングに使用)
-	req             *http.Request             // HTTPリクエスト
+	eventCh         chan<- domain.OrderEvent // 修正: 送信専用チャネル
+	stopCh          chan struct{}            // 停止シグナル用チャネル
+	conn            *http.Client             // HTTPクライアント(長時間のポーリングに使用)
+	req             *http.Request            // HTTPリクエスト
 }
 
 // NewEventStream は EventStream の新しいインスタンスを作成
-func NewEventStream(client TachibanaClient, cfg *config.Config, logger *zap.Logger, eventCh chan<- *domain.OrderEvent) *EventStream {
+func NewEventStream(client TachibanaClient, cfg *config.Config, logger *zap.Logger, eventCh chan<- domain.OrderEvent) *EventStream {
 	return &EventStream{
 		tachibanaClient: client,
 		config:          cfg,
@@ -212,7 +212,7 @@ func (es *EventStream) parseEvent(message []byte) (*domain.OrderEvent, error) {
 // sendEvent は、パースされたイベントを usecase 層に送信
 func (es *EventStream) sendEvent(event *domain.OrderEvent) {
 	select {
-	case es.eventCh <- event: // チャネルに送信
+	case es.eventCh <- *event: // チャネルに送信
 	case <-es.stopCh: // 停止シグナルを受け取ったら終了
 		return
 	default:
