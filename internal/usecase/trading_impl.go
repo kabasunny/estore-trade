@@ -3,6 +3,7 @@ package usecase
 
 import (
 	"context"
+	"estore-trade/internal/config"
 	"estore-trade/internal/domain"
 	"estore-trade/internal/infrastructure/persistence/tachibana"
 	"fmt"
@@ -16,24 +17,28 @@ type tradingUsecase struct {
 	logger          *zap.Logger
 	orderRepo       domain.OrderRepository
 	accountRepo     domain.AccountRepository
-	eventCh         chan domain.OrderEvent // 修正: 双方向チャネル
+	eventCh         chan domain.OrderEvent
+	config          *config.Config // configへの参照を保持
 }
 
-func NewTradingUsecase(tachibanaClient tachibana.TachibanaClient, logger *zap.Logger, orderRepo domain.OrderRepository, accountRepo domain.AccountRepository) *tradingUsecase { // 修正: *TradingUsecase を返す
+// NewTradingUsecase に config を追加
+func NewTradingUsecase(tachibanaClient tachibana.TachibanaClient, logger *zap.Logger, orderRepo domain.OrderRepository, accountRepo domain.AccountRepository, cfg *config.Config) *tradingUsecase {
 	return &tradingUsecase{
 		tachibanaClient: tachibanaClient,
 		logger:          logger,
 		orderRepo:       orderRepo,
 		accountRepo:     accountRepo,
-		eventCh:         make(chan domain.OrderEvent), // チャネルの初期化
+		eventCh:         make(chan domain.OrderEvent),
+		config:          cfg, // configをセット
 	}
 }
 
-// ... (PlaceOrder, GetOrderStatus, CancelOrder メソッドは変更なし) ...
-func (uc *tradingUsecase) PlaceOrder(ctx context.Context, userID, password string, order *domain.Order) (*domain.Order, error) {
-	uc.logger.Info("Placing order", zap.String("user_id", userID), zap.Any("order", order))
+func (uc *tradingUsecase) PlaceOrder(ctx context.Context, order *domain.Order) (*domain.Order, error) {
+	uc.logger.Info("Placing order", zap.Any("order", order))
 
-	requestURL, err := uc.tachibanaClient.Login(ctx, userID, password)
+	// config から ID/Password を取得
+	// Login はセッション管理を行うように修正済み
+	requestURL, err := uc.tachibanaClient.Login(ctx, uc.config)
 	if err != nil {
 		uc.logger.Error("立花証券APIログインに失敗", zap.Error(err))
 		return nil, err
@@ -78,7 +83,7 @@ func (uc *tradingUsecase) PlaceOrder(ctx context.Context, userID, password strin
 	return placedOrder, nil
 }
 
-// isValidPrice は、注文価格が呼値の単位に従っているかをチェックする関数
+// isValidPrice は、注文価格が呼値の単位に従っているかをチェックする関数 (変更なし)
 func isValidPrice(price float64, callPrice tachibana.CallPrice) bool {
 	prices := [20]float64{
 		callPrice.Price1, callPrice.Price2, callPrice.Price3, callPrice.Price4, callPrice.Price5,
@@ -104,8 +109,10 @@ func isValidPrice(price float64, callPrice tachibana.CallPrice) bool {
 	return false // ここには到達しないはずだが、念のため
 }
 
-func (uc *tradingUsecase) GetOrderStatus(ctx context.Context, userID, password string, orderID string) (*domain.Order, error) {
-	requestURL, err := uc.tachibanaClient.Login(ctx, userID, password)
+func (uc *tradingUsecase) GetOrderStatus(ctx context.Context, orderID string) (*domain.Order, error) {
+	// config から ID/Password を取得
+	// Login はセッション管理を行うように修正済み
+	requestURL, err := uc.tachibanaClient.Login(ctx, uc.config)
 	if err != nil {
 		return nil, err
 	}
@@ -118,31 +125,29 @@ func (uc *tradingUsecase) GetOrderStatus(ctx context.Context, userID, password s
 	return orderStatus, nil
 }
 
-func (uc *tradingUsecase) CancelOrder(ctx context.Context, userID, password string, orderID string) error {
-	requestURL, err := uc.tachibanaClient.Login(ctx, userID, password)
+func (uc *tradingUsecase) CancelOrder(ctx context.Context, orderID string) error {
+	requestURL, err := uc.tachibanaClient.Login(ctx, uc.config)
 	if err != nil {
 		return err
 	}
-
 	err = uc.tachibanaClient.CancelOrder(ctx, requestURL, orderID)
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
 
-// GetEventChannelReader は、EventStreamからイベントを受け取るためのチャネル (読み取り専用) を返す
-func (uc *tradingUsecase) GetEventChannelReader() <-chan domain.OrderEvent { // 修正
+// GetEventChannelReader は、EventStreamからイベントを受け取るためのチャネル (読み取り専用) を返す (変更なし)
+func (uc *tradingUsecase) GetEventChannelReader() <-chan domain.OrderEvent {
 	return uc.eventCh
 }
 
-// GetEventChannelWriter は、EventStreamにイベントを送信するためのチャネル(書き込み専用)を返す
-func (uc *tradingUsecase) GetEventChannelWriter() chan<- domain.OrderEvent { // 修正
+// GetEventChannelWriter は、EventStreamにイベントを送信するためのチャネル(書き込み専用)を返す (変更なし)
+func (uc *tradingUsecase) GetEventChannelWriter() chan<- domain.OrderEvent {
 	return uc.eventCh
 }
 
-// HandleOrderEvent は、EventStreamから受け取ったイベントを処理する
+// HandleOrderEvent は、EventStreamから受け取ったイベントを処理する (変更なし)
 func (uc *tradingUsecase) HandleOrderEvent(ctx context.Context, event *domain.OrderEvent) error {
 	uc.logger.Info("Received order event", zap.Any("event", event))
 

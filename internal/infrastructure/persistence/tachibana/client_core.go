@@ -55,7 +55,10 @@ func NewTachibanaClient(cfg *config.Config, logger *zap.Logger) TachibanaClient 
 }
 
 // Login は API にログインし、仮想URLを返す。有効期限内ならキャッシュされたURLを返す
-func (tc *TachibanaClientImple) Login(ctx context.Context, userID, password string) (string, error) {
+func (tc *TachibanaClientImple) Login(ctx context.Context, cfg *config.Config) (string, error) {
+	userID := cfg.TachibanaUserID
+	password := cfg.TachibanaPassword
+
 	// Read Lock: キャッシュされたURLが有効ならそれを返す
 	tc.mu.RLock()
 	if time.Now().Before(tc.expiry) && tc.requestURL != "" {

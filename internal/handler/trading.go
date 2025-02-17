@@ -44,12 +44,11 @@ func (h *TradingHandler) HandleTrade(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 3. 認証情報などの取得 (通常はリクエストヘッダや認証トークンから)
-	//    ここでは簡略化のため、固定値を使用。実際には、認証ミドルウェアなどを使う。
-	userID := "your_user_id"    // 実際にはリクエストから取得
-	password := "your_password" // 実際にはセキュアな方法で管理
+	// 認証情報はusecaseでconfigから取得するので、ここでは不要
 
 	// 4. ユースケースの実行 (注文処理)
-	placedOrder, err := h.tradingUsecase.PlaceOrder(ctx, userID, password, &orderRequest)
+	// userID, password を削除
+	placedOrder, err := h.tradingUsecase.PlaceOrder(ctx, &orderRequest)
 	if err != nil {
 		h.logger.Error("Failed to place order", zap.Error(err))
 		// エラーの種類に応じて適切なHTTPステータスコードを返す

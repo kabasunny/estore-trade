@@ -17,7 +17,7 @@ import (
 
 type EventStream struct {
 	tachibanaClient TachibanaClient
-	config          *config.Config
+	config          *config.Config // configへの参照を保持
 	logger          *zap.Logger
 	eventCh         chan<- domain.OrderEvent // 修正: 送信専用チャネル
 	stopCh          chan struct{}            // 停止シグナル用チャネル
@@ -29,7 +29,7 @@ type EventStream struct {
 func NewEventStream(client TachibanaClient, cfg *config.Config, logger *zap.Logger, eventCh chan<- domain.OrderEvent) *EventStream {
 	return &EventStream{
 		tachibanaClient: client,
-		config:          cfg,
+		config:          cfg, // configをセット
 		logger:          logger,
 		eventCh:         eventCh,
 		stopCh:          make(chan struct{}),
@@ -43,7 +43,7 @@ func (es *EventStream) Start() error {
 	defer cancel()
 
 	// ログインして仮想URLを取得 (tachibanaClient.Login はセッション管理を行うように修正済み)
-	requestURL, err := es.tachibanaClient.Login(ctx, "your_user_id", "your_password") // ユーザーIDとパスワードは適切に設定
+	requestURL, err := es.tachibanaClient.Login(ctx, es.config)
 	if err != nil {
 		es.logger.Error("Failed to login for event stream", zap.Error(err))
 		return fmt.Errorf("failed to login for event stream: %w", err)
@@ -191,7 +191,7 @@ func (es *EventStream) parseEvent(message []byte) (*domain.OrderEvent, error) {
 			if err == nil {
 				order.Quantity = quantity
 			}
-		// ... 他のECのフィールドも同様に処理 ...
+			// ... 他のECのフィールドも同様に処理 ...
 
 		default: // その他の場合
 			//es.logger.Warn("Unknown field in event message", zap.String("key", key)) // ログは多すぎるのでコメントアウト

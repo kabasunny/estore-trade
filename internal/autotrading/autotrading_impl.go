@@ -1,18 +1,19 @@
+// internal/autotrading/autotrading_impl.go
 package autotrading
 
 import (
 	"context"
-	"estore-trade/internal/config" // 修正: インポートパス
+	"estore-trade/internal/config"
 	"estore-trade/internal/domain"
 	"estore-trade/internal/usecase"
 
-	"go.uber.org/zap" // 修正: zap を直接インポート
+	"go.uber.org/zap"
 )
 
 type autoTradingUsecase struct {
-	tradingUsecase       usecase.TradingUsecase // 既存の取引ユースケース
-	autoTradingAlgorithm *AutoTradingAlgorithm  // 外部の自動売買アルゴリズム(仮)
-	logger               *zap.Logger            // 修正: zap.Logger へのポインタ
+	tradingUsecase       usecase.TradingUsecase
+	autoTradingAlgorithm *AutoTradingAlgorithm
+	logger               *zap.Logger
 	config               config.Config
 	eventCh              <-chan domain.OrderEvent
 }
@@ -21,8 +22,8 @@ func NewAutoTradingUsecase(tradingUsecase usecase.TradingUsecase, autoTradingAlg
 	return &autoTradingUsecase{
 		tradingUsecase:       tradingUsecase,
 		autoTradingAlgorithm: autoTradingAlgorithm,
-		logger:               logger, //loggerをセット
-		config:               *config,
+		logger:               logger,
+		config:               *config, // ポインタを値渡し
 		eventCh:              eventCh,
 	}
 }
@@ -68,13 +69,12 @@ func (a *autoTradingUsecase) HandleEvent(event domain.OrderEvent) {
 			Quantity:  position.Quantity, // 数量 (仮)
 			// Price は成行注文の場合は設定しない (または 0 などの特別な値を設定)
 		}
-		if _, err := a.tradingUsecase.PlaceOrder(context.Background(), "your_user_id", "your_password", &order); err != nil {
+		// userID, password を削除
+		if _, err := a.tradingUsecase.PlaceOrder(context.Background(), &order); err != nil {
 			a.logger.Error("auto trading order error", zap.Error(err))
 		}
 	}
 }
-
-// 以降、AutoTradingAlgorithm, Signal, Position の定義は省略 (autotrading_impl.go に記述されているものを使用)
 
 // 外部の自動売買アルゴリズムのインターフェース(仮)
 type AutoTradingAlgorithm struct {
