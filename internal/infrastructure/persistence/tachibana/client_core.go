@@ -25,7 +25,11 @@ type TachibanaClientImple struct {
 	apiKey     string
 	secret     string
 	logger     *zap.Logger
-	requestURL string       // キャッシュする仮想URL
+	loggined   bool
+	requestURL string       // キャッシュする仮想URL（REQUEST)
+	masterURL  string       // キャッシュする仮想URL（Master)
+	priceURL   string       // キャッシュする仮想URL（Price)
+	eventURL   string       // キャッシュする仮想URL（EVENT)
 	expiry     time.Time    // 仮想URLの有効期限
 	mu         sync.RWMutex // 排他制御用
 	pNo        int64        // p_no の連番管理用
@@ -48,6 +52,7 @@ func NewTachibanaClient(cfg *config.Config, logger *zap.Logger) TachibanaClient 
 		apiKey:       cfg.TachibanaAPIKey,
 		secret:       cfg.TachibanaAPISecret,
 		logger:       logger,
+		loggined:     false,                        // 初期値はfalse
 		pNo:          0,                            // 初期値は0
 		callPriceMap: make(map[string]CallPrice),   // 追加: 呼値
 		issueMap:     make(map[string]IssueMaster), // 追加: 銘柄
@@ -55,15 +60,15 @@ func NewTachibanaClient(cfg *config.Config, logger *zap.Logger) TachibanaClient 
 }
 
 // Login は API にログインし、仮想URLを返す。有効期限内ならキャッシュされたURLを返す
-func (tc *TachibanaClientImple) Login(ctx context.Context, cfg *config.Config) (string, error) {
+func (tc *TachibanaClientImple) Login(ctx context.Context, cfg *config.Config) (bool, error) {
 	userID := cfg.TachibanaUserID
 	password := cfg.TachibanaPassword
 
 	// Read Lock: キャッシュされたURLが有効ならそれを返す
 	tc.mu.RLock()
-	if time.Now().Before(tc.expiry) && tc.requestURL != "" {
+	if time.Now().Before(tc.expiry) && tc.loggined && tc.requestURL != "" && tc.masterURL != "" && tc.priceURL != "" && tc.eventURL != "" {
 		tc.mu.RUnlock()
-		return tc.requestURL, nil
+		return tc.loggined, nil
 	}
 	tc.mu.RUnlock()
 
@@ -71,10 +76,6 @@ func (tc *TachibanaClientImple) Login(ctx context.Context, cfg *config.Config) (
 	tc.mu.Lock()
 	defer tc.mu.Unlock()
 
-	// 他のゴルーチンが既にURLを更新したかもしれないので、再度チェック
-	if time.Now().Before(tc.expiry) && tc.requestURL != "" {
-		return tc.requestURL, nil
-	}
 	return login(ctx, tc, userID, password)
 }
 
@@ -92,21 +93,22 @@ func (tc *TachibanaClientImple) ConnectEventStream(ctx context.Context) (<-chan 
 	return nil, fmt.Errorf("ConnectEventStream method should be implemented in event_stream.go")
 }
 
-func sendRequest(ctx context.Context, tc *TachibanaClientImple, requestURL string, payload interface{}) (map[string]interface{}, error) {
+func sendRequest(ctx context.Context, tc *TachibanaClientImple, payload interface{}) (map[string]interface{}, error) {
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
 		tc.logger.Error("ペイロードのJSONエンコードに失敗", zap.Error(err))
 		return nil, fmt.Errorf("failed to marshal payload: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, requestURL, bytes.NewBuffer(payloadJSON))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, tc.requestURL, bytes.NewBuffer(payloadJSON))
 	if err != nil {
 		tc.logger.Error("リクエストの作成に失敗", zap.Error(err))
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	req = withContextAndTimeout(req, 60*time.Second)
+	req, cancel := withContextAndTimeout(req, 60*time.Second)
+	defer cancel()
 	client := &http.Client{Timeout: 60 * time.Second} // タイムアウト設定
 	resp, err := client.Do(req)
 	if err != nil {
@@ -129,4 +131,45 @@ func sendRequest(ctx context.Context, tc *TachibanaClientImple, requestURL strin
 	}
 	resp.Body.Close()
 	return response, nil
+}
+
+func (tc *TachibanaClientImple) GetRequestURL() (string, error) {
+	// Read Lock: キャッシュされたURLが有効ならそれを返す
+	tc.mu.RLock()
+	if time.Now().Before(tc.expiry) && tc.loggined && tc.requestURL != "" {
+		tc.mu.RUnlock()
+		return tc.requestURL, nil
+	}
+	tc.mu.RUnlock()
+	return "", fmt.Errorf("request URL not found, neead to Login")
+}
+
+func (tc *TachibanaClientImple) GetMasterURL() (string, error) {
+	tc.mu.RLock()
+	if time.Now().Before(tc.expiry) && tc.loggined && tc.masterURL != "" {
+		tc.mu.RUnlock()
+		return tc.masterURL, nil
+	}
+	tc.mu.RUnlock()
+	return "", fmt.Errorf("master URL not found, neead to Login")
+}
+
+func (tc *TachibanaClientImple) GetPriceURL() (string, error) {
+	tc.mu.RLock()
+	if time.Now().Before(tc.expiry) && tc.loggined && tc.priceURL != "" {
+		tc.mu.RUnlock()
+		return tc.priceURL, nil
+	}
+	tc.mu.RUnlock()
+	return "", fmt.Errorf("price URL not found, neead to Login")
+}
+
+func (tc *TachibanaClientImple) GetEventURL() (string, error) {
+	tc.mu.RLock()
+	if time.Now().Before(tc.expiry) && tc.loggined && tc.eventURL != "" {
+		tc.mu.RUnlock()
+		return tc.eventURL, nil
+	}
+	tc.mu.RUnlock()
+	return "", fmt.Errorf("event URL not found, neead to Login")
 }

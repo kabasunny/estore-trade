@@ -15,17 +15,9 @@ func formatSDDate(t time.Time) string {
 }
 
 // withContextAndTimeout は、HTTP リクエストにコンテキストとタイムアウトを設定する
-func withContextAndTimeout(req *http.Request, timeout time.Duration) *http.Request {
+func withContextAndTimeout(req *http.Request, timeout time.Duration) (*http.Request, context.CancelFunc) {
 	ctx, cancel := context.WithTimeout(req.Context(), timeout)
-	// リクエストが完了したらコンテキストをキャンセルしてリソースを解放
-	// (キャンセル関数は複数回呼び出しても安全)
-	*req = *req.WithContext(ctx)
-	go func() {
-		<-ctx.Done()
-		cancel()
-	}()
-
-	return req
+	return req.WithContext(ctx), cancel
 }
 
 // retryDo は、HTTP リクエストをリトライ付きで実行する

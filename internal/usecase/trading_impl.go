@@ -38,7 +38,7 @@ func (uc *tradingUsecase) PlaceOrder(ctx context.Context, order *domain.Order) (
 
 	// config から ID/Password を取得
 	// Login はセッション管理を行うように修正済み
-	requestURL, err := uc.tachibanaClient.Login(ctx, uc.config)
+	_, err := uc.tachibanaClient.Login(ctx, uc.config)
 	if err != nil {
 		uc.logger.Error("立花証券APIログインに失敗", zap.Error(err))
 		return nil, err
@@ -68,7 +68,7 @@ func (uc *tradingUsecase) PlaceOrder(ctx context.Context, order *domain.Order) (
 		return nil, fmt.Errorf("invalid order price: %f", order.Price)
 	}
 
-	placedOrder, err := uc.tachibanaClient.PlaceOrder(ctx, requestURL, order)
+	placedOrder, err := uc.tachibanaClient.PlaceOrder(ctx, order)
 	if err != nil {
 		uc.logger.Error("立花証券API注文実行に失敗", zap.Error(err))
 		return nil, err
@@ -110,14 +110,7 @@ func isValidPrice(price float64, callPrice tachibana.CallPrice) bool {
 }
 
 func (uc *tradingUsecase) GetOrderStatus(ctx context.Context, orderID string) (*domain.Order, error) {
-	// config から ID/Password を取得
-	// Login はセッション管理を行うように修正済み
-	requestURL, err := uc.tachibanaClient.Login(ctx, uc.config)
-	if err != nil {
-		return nil, err
-	}
-
-	orderStatus, err := uc.tachibanaClient.GetOrderStatus(ctx, requestURL, orderID)
+	orderStatus, err := uc.tachibanaClient.GetOrderStatus(ctx, orderID)
 	if err != nil {
 		return nil, err
 	}
@@ -126,11 +119,8 @@ func (uc *tradingUsecase) GetOrderStatus(ctx context.Context, orderID string) (*
 }
 
 func (uc *tradingUsecase) CancelOrder(ctx context.Context, orderID string) error {
-	requestURL, err := uc.tachibanaClient.Login(ctx, uc.config)
-	if err != nil {
-		return err
-	}
-	err = uc.tachibanaClient.CancelOrder(ctx, requestURL, orderID)
+
+	err := uc.tachibanaClient.CancelOrder(ctx, orderID)
 	if err != nil {
 		return err
 	}

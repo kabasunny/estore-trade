@@ -13,7 +13,7 @@ import (
 )
 
 // PlaceOrder は API に対して新しい株式注文を行う
-func (tc *TachibanaClientImple) PlaceOrder(ctx context.Context, requestURL string, order *domain.Order) (*domain.Order, error) {
+func (tc *TachibanaClientImple) PlaceOrder(ctx context.Context, order *domain.Order) (*domain.Order, error) {
 	// リトライ処理
 	var err error
 	for retries := 0; retries < 3; retries++ {
@@ -33,7 +33,7 @@ func (tc *TachibanaClientImple) PlaceOrder(ctx context.Context, requestURL strin
 			"p_sd_date":           formatSDDate(time.Now()), // p_sd_date を設定
 		}
 
-		response, err := sendRequest(ctx, tc, requestURL, payload)
+		response, err := sendRequest(ctx, tc, payload)
 		if err != nil {
 			if isRetryableError(err) && retries < 2 {
 				tc.logger.Warn("PlaceOrder request failed, retrying...", zap.Error(err), zap.Int("retry", retries+1))
@@ -60,7 +60,7 @@ func (tc *TachibanaClientImple) PlaceOrder(ctx context.Context, requestURL strin
 	return nil, fmt.Errorf("place order failed after multiple retries: %w", err) // 最終的なエラー
 }
 
-func (tc *TachibanaClientImple) GetOrderStatus(ctx context.Context, requestURL string, orderID string) (*domain.Order, error) {
+func (tc *TachibanaClientImple) GetOrderStatus(ctx context.Context, orderID string) (*domain.Order, error) {
 	// リトライ処理
 	var err error
 	for retries := 0; retries < 3; retries++ {
@@ -72,7 +72,7 @@ func (tc *TachibanaClientImple) GetOrderStatus(ctx context.Context, requestURL s
 			"p_sd_date":    formatSDDate(time.Now()), // p_sd_date を設定
 		}
 
-		response, err := sendRequest(ctx, tc, requestURL, payload)
+		response, err := sendRequest(ctx, tc, payload)
 
 		if err != nil {
 			if isRetryableError(err) && retries < 2 {
@@ -98,7 +98,7 @@ func (tc *TachibanaClientImple) GetOrderStatus(ctx context.Context, requestURL s
 	return nil, fmt.Errorf("get order status failed after multiple retries: %w", err) // 最終的なエラー
 }
 
-func (tc *TachibanaClientImple) CancelOrder(ctx context.Context, requestURL string, orderID string) error {
+func (tc *TachibanaClientImple) CancelOrder(ctx context.Context, orderID string) error {
 	// リトライ処理
 	var err error
 
@@ -111,7 +111,7 @@ func (tc *TachibanaClientImple) CancelOrder(ctx context.Context, requestURL stri
 			"p_no":            tc.getPNo(),              // p_no を設定
 			"p_sd_date":       formatSDDate(time.Now()), // p_sd_date を設定
 		}
-		response, err := sendRequest(ctx, tc, requestURL, payload)
+		response, err := sendRequest(ctx, tc, payload)
 		if err != nil {
 			if isRetryableError(err) && retries < 2 {
 				tc.logger.Warn("CancelOrder request failed, retrying...", zap.Error(err), zap.Int("retry", retries+1))

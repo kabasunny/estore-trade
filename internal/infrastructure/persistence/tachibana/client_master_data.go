@@ -24,11 +24,11 @@ type masterDataManager struct {
 	issueMap     map[string]IssueMaster // 銘柄マスタ（株式）(Key: 銘柄コード)
 }
 
-func (tc *TachibanaClientImple) DownloadMasterData(ctx context.Context, requestURL string) error {
+func (tc *TachibanaClientImple) DownloadMasterData(ctx context.Context) error {
 	payload := map[string]string{
-		"sCLMID":    clmidDownloadMasterData, // マスタデータダウンロード用のsCLMID
-		"p_no":      tc.getPNo(),
-		"p_sd_date": formatSDDate(time.Now()),
+		"sCLMID":    clmidDownloadMasterData,  // マスタデータダウンロード用のsCLMID
+		"p_no":      tc.getPNo(),              // v4.6以降不要か
+		"p_sd_date": formatSDDate(time.Now()), // v4.6以降不要か
 	}
 
 	payloadJSON, err := json.Marshal(payload) // ここで payload を使用
@@ -36,16 +36,18 @@ func (tc *TachibanaClientImple) DownloadMasterData(ctx context.Context, requestU
 		return fmt.Errorf("failed to marshal master data request payload: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, requestURL, bytes.NewBuffer(payloadJSON))
+	// HTTPリクエストを作成
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, tc.masterURL, bytes.NewBuffer(payloadJSON))
 	if err != nil {
 		return fmt.Errorf("failed to create master data request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 
 	// コンテキストとタイムアウトの設定
-	req = withContextAndTimeout(req, 600*time.Second) // マスタデータダウンロードは時間がかかる可能性があるため、長めに設定
-	client := &http.Client{}                          //  client := &http.Client{Timeout: 600 * time.Second}
-	resp, err := client.Do(req)
+	req, cancel := withContextAndTimeout(req, 600*time.Second) // マスタデータダウンロードは時間がかかる可能性があるため、長めに設定
+	defer cancel()
+	client := &http.Client{}    //  client := &http.Client{Timeout: 600 * time.Second}
+	resp, err := client.Do(req) // リクエスト送信
 	if err != nil {
 		return fmt.Errorf("failed to send master data request: %w", err)
 	}
@@ -54,6 +56,7 @@ func (tc *TachibanaClientImple) DownloadMasterData(ctx context.Context, requestU
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("master data API returned non-200 status code: %d", resp.StatusCode)
 	}
+	// Shift-JISからUTF-8に変換するリーダーを作成
 	reader := transform.NewReader(resp.Body, japanese.ShiftJIS.NewDecoder())
 
 	// マスタデータマネージャーの初期化

@@ -1,7 +1,7 @@
-// internal/config/config.go
 package config
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 
@@ -23,14 +23,15 @@ type Config struct {
 	EventRid           string // p_rid
 	EventBoardNo       string // p_board_no
 	EventEvtCmd        string // p_evt_cmd
-	HTTPPort           int    // 追加
+	HTTPPort           int
 }
 
 func LoadConfig(envPath string) (*Config, error) {
 	err := godotenv.Load(envPath)
 	if err != nil {
-		// .envがなくても続行。システム環境変数を使用するため
-		// return nil, err
+		// .envファイルが見つからない場合にエラーメッセージを表示して終了
+		fmt.Printf(".envファイルが見つかりませんでした: %v\n", err)
+		return nil, err
 	}
 
 	dbPort, err := strconv.Atoi(os.Getenv("DB_PORT"))
