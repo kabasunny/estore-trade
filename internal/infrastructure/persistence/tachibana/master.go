@@ -2,32 +2,28 @@
 
 package tachibana
 
-// SystemStatus (仮の定義 - ドキュメントとPythonコードに基づいて修正が必要)
+// SystemStatus システム状態 (必要最低限)
 type SystemStatus struct {
-	SystemStatusKey string `json:"sSystemStatusKey"` // システム状態を一意に識別するキー
-	LoginPermission string `json:"sLoginKyokaKubun"` // ログイン許可区分 ("0": ログイン不許可, "1": ログイン許可 など)
-	SystemState     string `json:"sSystemStatus"`    // システム状態 ("0": サービス停止, "1": サービス中 など)
-	CreateTime      string `json:"sCreateTime"`      // 作成日時（必要に応じて time.Time に変換）
-	UpdateTime      string `json:"sUpdateTime"`      // 更新日時（必要に応じて time.Time に変換）
-	UpdateNumber    string `json:"sUpdateNumber"`    // 更新通番（更新のたびにインクリメントされる番号）
-	DeleteFlag      string `json:"sDeleteFlag"`      // 削除フラグ（論理削除用）
-	DeleteTime      string `json:"sDeleteTime"`      // 削除時刻（必要に応じて time.Time に変換）
+	SystemStatusKey string `json:"sSystemStatusKey"` // システム状態ＫＥＹ	001固定
+	LoginPermission string `json:"sLoginKyokaKubun"` // ログイン許可区分	0：不許可 1：許可 2：不許可(サービス時間外) 9：管理者のみ可(テスト中)
+	SystemState     string `json:"sSystemStatus"`    // システム状態	0：閉局 1：開局 2：一時停止
 }
 
-// DateInfo (仮の定義 - ドキュメントとPythonコードに基づいて修正が必要)
+// DateInfo 日付情報 (必要最低限)
 type DateInfo struct {
-	DateKey          string `json:"sDayKey"`         // 日付情報を一意に識別するキー
-	PrevBusinessDay1 string `json:"sMaeEigyouDay_1"` // 1営業日前の日付（必要に応じて time.Time に変換）
-	PrevBusinessDay2 string `json:"sMaeEigyouDay_2"` // 2営業日前の日付（必要に応じて time.Time に変換）
-	// ... 他の日付フィールド ...
-	NextBusinessDay10 string `json:"sYokuEigyouDay_10"` // 10営業日後の日付（必要に応じて time.Time に変換）
-	StockDeliveryDate string `json:"sKabuUkewatasiDay"` // 株式の受渡日（必要に応じて time.Time に変換）
+	DateKey           string `json:"sDayKey"`           // 日付ＫＥＹ	001：当日基準 002：翌日基準（夕場）
+	PrevBusinessDay1  string `json:"sMaeEigyouDay_1"`   // １営業日前	YYYYMMDD
+	TheDay            string `json:"sTheDay"`           // 当日日付	YYYYMMDD
+	NextBusinessDay1  string `json:"sYokuEigyouDay_1"`  // 翌１営業日	YYYYMMDD
+	StockDeliveryDate string `json:"sKabuUkewatasiDay"` // 株式受渡日	YYYYMMDD
+
+	// 他の日付情報は、必要になったら追加
 }
 
-// CallPrice (呼値)
+// CallPrice 呼値
 type CallPrice struct {
 	UnitNumber  int     `json:"sYobineTaniNumber,string"` // 呼値の単位番号
-	ApplyDate   string  `json:"sTekiyouDay"`              // 呼値の適用日
+	ApplyDate   string  `json:"sTekiyouDay"`              // 適用日
 	Price1      float64 `json:"sKizunPrice_1,string"`     // 基準値段1
 	Price2      float64 `json:"sKizunPrice_2,string"`     // 基準値段2
 	Price3      float64 `json:"sKizunPrice_3,string"`     // 基準値段3
@@ -88,26 +84,50 @@ type CallPrice struct {
 	Decimal18   int     `json:"sDecimal_18,string"`       // 小数点以下の桁数18
 	Decimal19   int     `json:"sDecimal_19,string"`       // 小数点以下の桁数19
 	Decimal20   int     `json:"sDecimal_20,string"`       // 小数点以下の桁数20
+
+	// 他の基準値段、呼値単価、小数点以下の桁数は、必要になったら追加
 }
 
-// IssueMaster (株式の銘柄に関する基本情報)
+// IssueMaster 株式銘柄マスタ (必要最低限)
 type IssueMaster struct {
-	IssueCode           string `json:"sIssueCode"`         // 銘柄コード (例: "7203" (トヨタ自動車))
-	IssueName           string `json:"sIssueName"`         // 銘柄名 (例: "トヨタ自動車")
-	IssueNameRyaku      string `json:"sIssueNameRyaku"`    // 銘柄略称
-	IssueNameKana       string `json:"sIssueNameKana"`     // 銘柄名（カナ）
-	IssueNameEizi       string `json:"sIssueNameEizi"`     // 銘柄名（英字）
-	MarketCode          string `json:"sSizyouC"`           // 市場コード (例: "00" (東証))
-	TradingUnit         int    `json:"sBaibaiTani,string"` // 売買単位 (例: 100 株)
-	CallPriceUnitNumber string `json:"sYobineTaniNumber"`  // 呼値の単位番号 (CallPrice と紐付けに使用)
+	IssueCode   string `json:"sIssueCode"`         // 銘柄コード
+	IssueName   string `json:"sIssueName"`         // 銘柄名称
+	TradingUnit int    `json:"sBaibaiTani,string"` // 売買単位
+	TokuteiF    string `json:"sTokuteiF"`          // 特定口座対象Ｃ
+
+	// 他の情報は、必要になったら追加
 }
 
-// OperationStatus (市場の運用状態)
-type OperationStatus struct {
-	SystemAccount string `json:"sSystemKouzaKubun"` // システム口座区分
-	Market        string `json:"sZyouzyouSizyou"`   // 上場市場 (例: "00" (東証))
-	Category      string `json:"sUnyouCategory"`    // 運用カテゴリ (例: "01" (株式))
-	Unit          string `json:"sUnyouUnit"`        // 運用単位
-	BusinessDay   string `json:"sEigyouDayC"`       // 営業日区分
-	Status        string `json:"sUnyouStatus"`      // 運用ステータス (注文受付中、立会終了 など)
+// IssueMarketMaster 株式銘柄市場マスタ
+type IssueMarketMaster struct {
+	IssueCode               string  `json:"sIssueCode"`             // 銘柄コード
+	MarketCode              string  `json:"sZyouzyouSizyou"`        // 上場市場
+	PriceRangeMin           float64 `json:"sNehabaMin,string"`      // 値幅下限
+	PriceRangeMax           float64 `json:"sNehabaMax,string"`      // 値幅上限
+	SinyouC                 string  `json:"sSinyouC"`               // 信用取引区分
+	PreviousClose           float64 `json:"sZenzituOwarine,string"` // 前日終値（必要に応じて）
+	IssueKubunC             string  `json:"sIssueKubunC"`           // 銘柄区分（必要に応じて）
+	ZyouzyouKubun           string  `json:"sZyouzyouKubun"`         // 上場区分 (必要に応じて)
+	CallPriceUnitNumber     string  `json:"sYobineTaniNumber"`      // 呼値の単位番号
+	CallPriceUnitNumberYoku string  `json:"sYobineTaniNumberYoku"`  // 呼値の単位番号(翌営業日)
+	// 他の情報は、必要になったら追加
+}
+
+// IssueMarketRegulation 株式銘柄別・市場別規制 (必要最低限)
+type IssueMarketRegulation struct {
+	IssueCode               string `json:"sIssueCode"`               // 銘柄コード
+	ListedMarket            string `json:"sZyouzyouSizyou"`          // 上場市場
+	StopKubun               string `json:"sTeisiKubun"`              // 停止区分
+	GenbutuUrituke          string `json:"sGenbutuUrituke"`          // 現物/売付
+	SeidoSinyouSinkiUritate string `json:"sSeidoSinyouSinkiUritate"` // 制度信用/売建
+	IppanSinyouSinkiUritate string `json:"sIppanSinyouSinkiUritate"` // 一般信用/売建
+	SinyouSyutyuKubun       string `json:"sSinyouSyutyuKubun"`       // 信用一極集中区分（必要に応じて）
+	// 他の情報は、必要になったら追加
+}
+
+// OperationStatusKabu 運用ステータス（株）(必要最低限)
+type OperationStatusKabu struct {
+	ListedMarket string `json:"sZyouzyouSizyou"` // 上場市場
+	Unit         string `json:"sUnyouUnit"`      // 運用単位
+	Status       string `json:"sUnyouStatus"`    // 運用ステータス
 }

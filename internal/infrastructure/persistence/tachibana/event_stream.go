@@ -43,15 +43,17 @@ func (es *EventStream) Start() error {
 	defer cancel()
 
 	// ログインして仮想URLを取得 (tachibanaClient.Login はセッション管理を行うように修正済み)
-	requestURL, err := es.tachibanaClient.Login(ctx, es.config)
+	err := es.tachibanaClient.Login(ctx, es.config)
 	if err != nil {
 		es.logger.Error("Failed to login for event stream", zap.Error(err))
 		return fmt.Errorf("failed to login for event stream: %w", err)
 	}
 
+	eventURL, _ := es.tachibanaClient.GetEventURL()
+
 	// EVENT I/F へのリクエストURL作成
-	eventURL := fmt.Sprintf("%s?p_rid=%s&p_board_no=%s&p_eno=0&p_evt_cmd=%s",
-		requestURL, es.config.EventRid, es.config.EventBoardNo, es.config.EventEvtCmd)
+	eventURL = fmt.Sprintf("%s?p_rid=%s&p_board_no=%s&p_eno=0&p_evt_cmd=%s",
+		eventURL, es.config.EventRid, es.config.EventBoardNo, es.config.EventEvtCmd)
 
 	// HTTP GET リクエスト (Long Polling) 初回のみ
 	es.req, err = http.NewRequestWithContext(ctx, http.MethodGet, eventURL, nil)

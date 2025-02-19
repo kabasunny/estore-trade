@@ -23,6 +23,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// 極力、通信量やメモリ使用量を抑える設計を心がける
 func main() {
 	// 1. 初期設定
 	cfg, err := config.LoadConfig(".env") // 設定ファイルの読み込み
@@ -47,7 +48,7 @@ func main() {
 	tachibanaClient := tachibana.NewTachibanaClient(cfg, logger) // TachibanaClientの初期化
 
 	// 2. 立花証券APIへのログインとマスタデータ取得
-	_, err = tachibanaClient.Login(context.Background(), cfg) // 立花証券APIにログインし、仮想URL（REQUEST)を取得
+	err = tachibanaClient.Login(context.Background(), cfg) // 立花証券APIにログインし、仮想URL（REQUEST)を取得
 	if err != nil {
 		logger.Fatal("Failed to login to Tachibana API（REQUEST)", zap.Error(err))
 		return
@@ -59,14 +60,14 @@ func main() {
 	}
 	logger.Info("Master data downloaded successfully")
 
-	// リポジトリの初期化
+	// 3. リポジトリの初期化
 	orderRepo := persistence.NewOrderRepository(db.DB())
 	accountRepo := persistence.NewAccountRepository(db.DB())
 
-	// ユースケースの初期化
+	// 4. ユースケースの初期化
 	tradingUsecase := usecase.NewTradingUsecase(tachibanaClient, logger, orderRepo, accountRepo, cfg)
 
-	// EventStreamの初期化 (書き込み専用チャネルを渡す)
+	// 5. EventStreamの初期化 (書き込み専用チャネルを渡す)
 	eventStream := tachibana.NewEventStream(tachibanaClient, cfg, logger, tradingUsecase.GetEventChannelWriter())
 	go func() {
 		// EVENT I/F からのイベントを非同期で受信・処理
@@ -75,7 +76,7 @@ func main() {
 		}
 	}() // ゴルーチンでイベントストリームを開始
 
-	// AutoTradingUsecase の初期化 (tradingUsecase, autoTradingAlgorithm, logger, config, eventCh を渡す)
+	// 6. AutoTradingUsecase の初期化 (tradingUsecase, autoTradingAlgorithm, logger, config, eventCh を渡す)
 	//  EventStream からのイベントを処理するゴルーチンの起動: trading usecase 層から読み取り専用チャネルを取得して使用
 	autoTradingAlgorithm := &autotrading.AutoTradingAlgorithm{} // 実際のアルゴリズムのインスタンスを生成
 	autoTradingUsecase := autotrading.NewAutoTradingUsecase(tradingUsecase, autoTradingAlgorithm, logger, cfg, tradingUsecase.GetEventChannelReader())
@@ -96,7 +97,6 @@ func main() {
 		Addr:    fmt.Sprintf(":%d", cfg.HTTPPort), // config からポート番号を取得
 		Handler: http.DefaultServeMux,
 	}
-	// --- 修正ここまで ---
 
 	go func() {
 		// エンドポイント "/trade" へのリクエストを非同期で処理

@@ -1,4 +1,4 @@
-// internal/infrastructure/persistence/tachibana/utils.go
+// utils.go
 package tachibana
 
 import (
@@ -21,12 +21,16 @@ func withContextAndTimeout(req *http.Request, timeout time.Duration) (*http.Requ
 }
 
 // retryDo は、HTTP リクエストをリトライ付きで実行する
-func retryDo(client *http.Client, req *http.Request, maxRetries int, initialBackoff time.Duration) (*http.Response, error) {
+// retryFunc: 実際に行うHTTPリクエストを含む関数
+// maxRetries: 最大リトライ回数
+// initialBackoff: 最初のリトライまでの待ち時間
+func retryDo(retryFunc func() (*http.Response, error), maxRetries int, initialBackoff time.Duration) (*http.Response, error) {
 	var resp *http.Response
 	var err error
 
 	for retries := 0; retries <= maxRetries; retries++ {
-		resp, err = client.Do(req)
+		resp, err = retryFunc() // retryFunc() は、HTTPリクエストを送信し、(*http.Response, error)を返す関数
+
 		if err == nil && resp.StatusCode == http.StatusOK {
 			// 成功したらレスポンスを返す
 			return resp, nil
@@ -42,7 +46,6 @@ func retryDo(client *http.Client, req *http.Request, maxRetries int, initialBack
 			if resp != nil && resp.Body != nil {
 				resp.Body.Close()
 			}
-
 		} else {
 			break // 最大リトライ回数に達したらループを抜ける
 		}
@@ -54,7 +57,6 @@ func retryDo(client *http.Client, req *http.Request, maxRetries int, initialBack
 		return nil, fmt.Errorf("HTTP request failed after %d retries: last error: %v, last status code: %d", maxRetries+1, err, resp.StatusCode)
 	}
 	return nil, fmt.Errorf("HTTP request failed after %d retries: last error: %w", maxRetries+1, err)
-
 }
 
 // isValidPrice は、注文価格が呼値の単位に従っているかをチェックする関数
@@ -79,5 +81,14 @@ func isValidPrice(price float64, callPrice CallPrice) bool {
 		}
 	}
 	return false // ここには到達しないはずだが、念のため
+}
 
+// contains は、スライスに特定の要素が含まれているかどうかをチェックするヘルパー関数
+func contains(slice []string, target string) bool {
+	for _, s := range slice {
+		if s == target {
+			return true
+		}
+	}
+	return false
 }
