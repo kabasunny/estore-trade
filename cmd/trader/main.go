@@ -55,6 +55,7 @@ func main() {
 		return
 	}
 
+	// 現状　tachibanaClientc.targetIssueCodesのデータ挿入が実装されていないので、ターゲッティングできなよ～
 	if err := tachibanaClient.DownloadMasterData(context.Background()); err != nil { // マスタデータダウンロード
 		logger.Fatal("マスタデータのダウンロードに失敗:", zap.Error(err))
 		return

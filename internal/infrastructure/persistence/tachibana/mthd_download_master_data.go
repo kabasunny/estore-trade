@@ -62,9 +62,12 @@ func (tc *TachibanaClientImple) DownloadMasterData(ctx context.Context) error {
 
 	// ターゲット銘柄の設定　指定された銘柄コードのみを対象とするようにマスタデータをフィルタリングする
 	if len(tc.targetIssueCodes) > 0 {
+		// 現状　tc.targetIssueCodesの挿入が実装されていない
 		if err := tc.SetTargetIssues(ctx, tc.targetIssueCodes); err != nil {
 			return err
 		}
+	} else {
+		fmt.Println("ターゲット銘柄が存在しません")
 	}
 
 	return nil
