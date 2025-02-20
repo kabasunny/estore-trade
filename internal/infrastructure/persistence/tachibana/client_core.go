@@ -3,10 +3,8 @@ package tachibana
 
 import (
 	"context"
-	"encoding/json"
 	_ "encoding/json"
 	"fmt"
-	"net/http"
 	"net/url"
 	"strconv"
 	"sync"
@@ -16,9 +14,7 @@ import (
 	"estore-trade/internal/domain"
 
 	"go.uber.org/zap"
-	"golang.org/x/text/encoding/japanese"
 	_ "golang.org/x/text/encoding/japanese"
-	"golang.org/x/text/transform"
 	_ "golang.org/x/text/transform"
 )
 
@@ -251,39 +247,6 @@ func (tc *TachibanaClientImple) CheckPriceIsValid(issueCode string, price float6
 
 	// isValidPrice 関数を使ってチェック
 	return isValidPrice(price, callPrice), nil
-}
-
-// sendRequest は、HTTPリクエストを送信し、レスポンスをデコードする (リトライ処理付き)
-func sendRequest(ctx context.Context, tc *TachibanaClientImple, req *http.Request) (map[string]interface{}, error) {
-	// リトライ処理を retryDo 関数に委譲
-	var response map[string]interface{}
-	retryFunc := func() (*http.Response, error) {
-		client := &http.Client{Timeout: 60 * time.Second}
-		resp, err := client.Do(req)
-		if err != nil {
-			return resp, err // エラーをそのまま返す
-		}
-		if resp.StatusCode != http.StatusOK {
-			resp.Body.Close()
-			return resp, fmt.Errorf("API returned non-200 status code: %d", resp.StatusCode) // ステータスコードが200以外の場合もエラーとして返す
-		}
-
-		// レスポンスのデコード処理もここで行う
-		reader := transform.NewReader(resp.Body, japanese.ShiftJIS.NewDecoder())
-		if err := json.NewDecoder(reader).Decode(&response); err != nil {
-			resp.Body.Close() // デコードに失敗した場合もクローズ
-			return resp, fmt.Errorf("failed to decode response: %w", err)
-		}
-		return resp, nil // 成功時はここ
-	}
-
-	resp, err := retryDo(retryFunc, 2, 2*time.Second) // 最大3回、初期遅延2秒
-	if err != nil {
-		return nil, err // retryDo でエラー処理済み
-	}
-	defer resp.Body.Close()
-
-	return response, nil
 }
 
 func (tc *TachibanaClientImple) GetRequestURL() (string, error) {

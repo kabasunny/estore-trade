@@ -40,7 +40,7 @@ func login(ctx context.Context, tc *TachibanaClientImple, userID, password strin
 	defer cancel()
 
 	// sendRequestを呼び出す（リトライ処理はsendRequest内で実施）
-	response, err := sendRequest(ctx, tc, req) // reqを渡すように変更
+	response, err := sendRequest(req) // reqを渡すように変更
 	if err != nil {
 		return false, fmt.Errorf("login failed: %w", err)
 	}

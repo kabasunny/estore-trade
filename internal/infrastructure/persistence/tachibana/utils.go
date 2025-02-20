@@ -3,10 +3,14 @@ package tachibana
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math"
 	"net/http"
 	"time"
+
+	"golang.org/x/text/encoding/japanese"
+	"golang.org/x/text/transform"
 )
 
 // formatSDDate は time.Time を YYYY.MM.DD-HH:MM:SS.TTT 形式の文字列に変換
@@ -18,6 +22,39 @@ func formatSDDate(t time.Time) string {
 func withContextAndTimeout(req *http.Request, timeout time.Duration) (*http.Request, context.CancelFunc) {
 	ctx, cancel := context.WithTimeout(req.Context(), timeout)
 	return req.WithContext(ctx), cancel
+}
+
+// sendRequest は、HTTPリクエストを送信し、レスポンスをデコードする (リトライ処理付き)
+func sendRequest(req *http.Request) (map[string]interface{}, error) {
+	// リトライ処理を retryDo 関数に委譲
+	var response map[string]interface{}
+	retryFunc := func() (*http.Response, error) {
+		client := &http.Client{Timeout: 60 * time.Second}
+		resp, err := client.Do(req) // HTTPリクエスト
+		if err != nil {
+			return resp, err // エラーをそのまま返す
+		}
+		if resp.StatusCode != http.StatusOK {
+			resp.Body.Close()
+			return resp, fmt.Errorf("API のステータスコードが200以外のためエラー: %d", resp.StatusCode) // ステータスコードが200以外の場合もエラーとして返す
+		}
+
+		// レスポンスのデコード処理もここで行う
+		reader := transform.NewReader(resp.Body, japanese.ShiftJIS.NewDecoder()) // Shift_JIS 文字エンコーディングをUTF-8にデコードするためのデコーダーを生成
+		if err := json.NewDecoder(reader).Decode(&response); err != nil {
+			resp.Body.Close() // デコードに失敗した場合もクローズ
+			return resp, fmt.Errorf("failed to decode response: %w", err)
+		}
+		return resp, nil // 成功時はここ
+	}
+
+	resp, err := retryDo(retryFunc, 2, 2*time.Second) // 最大3回、初期遅延2秒
+	if err != nil {
+		return nil, err // retryDo でエラー処理済み
+	}
+	defer resp.Body.Close()
+
+	return response, nil
 }
 
 // retryDo は、HTTP リクエストをリトライ付きで実行する

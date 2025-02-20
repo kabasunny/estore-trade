@@ -44,7 +44,7 @@ func (tc *TachibanaClientImple) PlaceOrder(ctx context.Context, order *domain.Or
 	req, cancel := withContextAndTimeout(req, 60*time.Second)
 	defer cancel()
 
-	response, err := sendRequest(ctx, tc, req) // リトライ処理はsendRequest内で実施、reqを渡す
+	response, err := sendRequest(req) // リトライ処理はsendRequest内で実施、reqを渡す
 	if err != nil {
 		return nil, fmt.Errorf("place order failed: %w", err)
 	}
@@ -85,7 +85,7 @@ func (tc *TachibanaClientImple) GetOrderStatus(ctx context.Context, orderID stri
 	req, cancel := withContextAndTimeout(req, 60*time.Second)
 	defer cancel()
 
-	response, err := sendRequest(ctx, tc, req) // リトライ処理はsendRequest内で実施,reqを渡す
+	response, err := sendRequest(req) // リトライ処理はsendRequest内で実施,reqを渡す
 	if err != nil {
 		return nil, fmt.Errorf("get order status failed: %w", err)
 	}
@@ -124,7 +124,7 @@ func (tc *TachibanaClientImple) CancelOrder(ctx context.Context, orderID string)
 	req, cancel := withContextAndTimeout(req, 60*time.Second)
 	defer cancel()
 
-	response, err := sendRequest(ctx, tc, req) // リトライ処理はsendRequest内で実施,reqを渡す
+	response, err := sendRequest(req) // リトライ処理はsendRequest内で実施,reqを渡す
 	if err != nil {
 		return fmt.Errorf("cancel order failed: %w", err)
 	}

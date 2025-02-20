@@ -33,7 +33,7 @@ func (tc *TachibanaClientImple) DownloadMasterData(ctx context.Context) error {
 
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
-		return fmt.Errorf("failed to marshal master data request payload: %w", err)
+		return fmt.Errorf("ペイロードのJSONマーシャルに失敗: %w", err)
 	}
 
 	// HTTPリクエストを作成
@@ -44,12 +44,10 @@ func (tc *TachibanaClientImple) DownloadMasterData(ctx context.Context) error {
 	req.Header.Set("Content-Type", "application/json")
 
 	// コンテキストとタイムアウトの設定
-	// 修正: withContextAndTimeoutの戻り値でreqを上書き
 	req, cancel := withContextAndTimeout(req, 600*time.Second) // マスタデータダウンロードは時間がかかる可能性があるため、長めに設定
 	defer cancel()
 
-	// リトライ処理 sendRequest関数に統一  //client := &http.Client{}を削除
-	response, err := sendRequest(ctx, tc, req) // reqを渡す
+	response, err := sendRequest(req) // HTTPリクエストを送信し、レスポンスをデコードする (リトライ処理付き)
 	if err != nil {
 		return fmt.Errorf("failed to download master data: %w", err)
 	}

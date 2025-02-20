@@ -25,6 +25,7 @@ import (
 
 // 極力、通信量やメモリ使用量を抑える設計を心がける
 func main() {
+
 	// 1. 初期設定
 	cfg, err := config.LoadConfig(".env") // 設定ファイルの読み込み
 	if err != nil {
@@ -50,19 +51,19 @@ func main() {
 	// 2. 立花証券APIへのログインとマスタデータ取得
 	err = tachibanaClient.Login(context.Background(), cfg) // 立花証券APIにログインし、仮想URL（REQUEST)を取得
 	if err != nil {
-		logger.Fatal("Failed to login to Tachibana API（REQUEST)", zap.Error(err))
+		logger.Fatal("API（REQUEST I/F) のログインに失敗:", zap.Error(err))
 		return
 	}
 
 	if err := tachibanaClient.DownloadMasterData(context.Background()); err != nil { // マスタデータダウンロード
-		logger.Fatal("Failed to download master data", zap.Error(err))
+		logger.Fatal("マスタデータのダウンロードに失敗:", zap.Error(err))
 		return
 	}
-	logger.Info("Master data downloaded successfully")
+	logger.Info("マスタデータのダウンロードに成功")
 
 	// 3. リポジトリの初期化
-	orderRepo := persistence.NewOrderRepository(db.DB())
-	accountRepo := persistence.NewAccountRepository(db.DB())
+	orderRepo := persistence.NewOrderRepository(db.DB())     // 注文情報を管理する
+	accountRepo := persistence.NewAccountRepository(db.DB()) // 口座情報を管理する
 
 	// 4. ユースケースの初期化
 	tradingUsecase := usecase.NewTradingUsecase(tachibanaClient, logger, orderRepo, accountRepo, cfg)
@@ -70,26 +71,22 @@ func main() {
 	// 5. EventStreamの初期化 (書き込み専用チャネルを渡す)
 	eventStream := tachibana.NewEventStream(tachibanaClient, cfg, logger, tradingUsecase.GetEventChannelWriter())
 	go func() {
-		// EVENT I/F からのイベントを非同期で受信・処理
-		if err := eventStream.Start(); err != nil {
+		if err := eventStream.Start(); err != nil { // EVENT I/F からのイベントを非同期で受信・処理
 			logger.Error("EventStream error", zap.Error(err))
 		}
-	}() // ゴルーチンでイベントストリームを開始
+	}()
 
-	// 6. AutoTradingUsecase の初期化 (tradingUsecase, autoTradingAlgorithm, logger, config, eventCh を渡す)
-	//  EventStream からのイベントを処理するゴルーチンの起動: trading usecase 層から読み取り専用チャネルを取得して使用
+	// 6. AutoTradingUsecase の初期化
 	autoTradingAlgorithm := &autotrading.AutoTradingAlgorithm{} // 実際のアルゴリズムのインスタンスを生成
 	autoTradingUsecase := autotrading.NewAutoTradingUsecase(tradingUsecase, autoTradingAlgorithm, logger, cfg, tradingUsecase.GetEventChannelReader())
-	go autoTradingUsecase.Start() // 自動売買ロジックを非同期で実行
+	go autoTradingUsecase.Start() // EventStream からのイベントを受信し、自動売買ロジックを非同期で実行
 
-	// ハンドラーの初期化とHTTPサーバーの設定
+	// 7. ハンドラーの初期化とHTTPサーバーの設定
 	tradingHandler := handler.NewTradingHandler(tradingUsecase, logger)
 	http.HandleFunc("/trade", tradingHandler.HandleTrade)
-	// --- 修正ここから ---
 	logger.Info("Starting server on port", zap.Int("port", cfg.HTTPPort))
 
-	// シグナル処理のコンテキストを作成
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM) // シグナル処理のコンテキストを作成
 	defer stop()
 
 	// HTTPサーバーの初期化
@@ -105,17 +102,15 @@ func main() {
 		}
 	}() // ゴルーチンでサーバーを開始
 
-	// シグナルを待つ
-	<-ctx.Done()
+	// 8. シグナル処理とサーバーのシャットダウン
+	<-ctx.Done() // シグナルを待つ
 	logger.Info("Shutting down server...")
 
-	// EventStreamの停止
-	if err := eventStream.Stop(); err != nil {
+	if err := eventStream.Stop(); err != nil { // EventStreamの停止
 		logger.Error("Failed to stop EventStream", zap.Error(err))
 	}
 
-	// コンテキストを使ってサーバーをシャットダウン
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second) // コンテキストを使ってサーバーをシャットダウン
 	defer cancel()
 	if err := srv.Shutdown(ctx); err != nil {
 		logger.Fatal("Server forced to shutdown:", zap.Error(err))
