@@ -37,7 +37,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("ロガーの初期化に失敗: %v", err)
 	}
-	defer logger.Sync() // プログラム終了時にロガーを同期
+	defer logger.Sync() // プログラム終了時にロガーを同期（バッファされたログエントリを強制的にフラッシュ））
 
 	db, err := postgres.NewPostgresDB(cfg, logger) // データベースの接続
 	if err != nil {
@@ -70,16 +70,25 @@ func main() {
 
 	// 5. EventStreamの初期化 (書き込み専用チャネルを渡す)
 	eventStream := tachibana.NewEventStream(tachibanaClient, cfg, logger, tradingUsecase.GetEventChannelWriter())
+	// エラーチャネルを追加
+	errCh := make(chan error, 1) // エラーを受け取るためのチャネル (バッファサイズ 1)
+
 	go func() {
 		if err := eventStream.Start(); err != nil { // EVENT I/F からのイベントを非同期で受信・処理
 			logger.Error("EventStream error", zap.Error(err))
+			errCh <- err // エラーをチャネルに送信
 		}
 	}()
 
 	// 6. AutoTradingUsecase の初期化
 	autoTradingAlgorithm := &autotrading.AutoTradingAlgorithm{} // 実際のアルゴリズムのインスタンスを生成
 	autoTradingUsecase := autotrading.NewAutoTradingUsecase(tradingUsecase, autoTradingAlgorithm, logger, cfg, tradingUsecase.GetEventChannelReader())
-	go autoTradingUsecase.Start() // EventStream からのイベントを受信し、自動売買ロジックを非同期で実行
+	go func() {
+		if err := autoTradingUsecase.Start(); err != nil {
+			logger.Error("AutoTradingUsecase error", zap.Error(err))
+			errCh <- err // エラーをチャネルに送信
+		}
+	}()
 
 	// 7. ハンドラーの初期化とHTTPサーバーの設定
 	tradingHandler := handler.NewTradingHandler(tradingUsecase, logger)
@@ -103,7 +112,12 @@ func main() {
 	}() // ゴルーチンでサーバーを開始
 
 	// 8. シグナル処理とサーバーのシャットダウン
-	<-ctx.Done() // シグナルを待つ
+	select { // 複数のチャネルからのイベントを待つ
+	case <-ctx.Done(): // シグナルを待つ
+	case err := <-errCh: // EventStream または AutoTradingUsecase からのエラーを待つ
+		logger.Error("Received error from goroutine", zap.Error(err))
+	}
+
 	logger.Info("Shutting down server...")
 
 	if err := eventStream.Stop(); err != nil { // EventStreamの停止

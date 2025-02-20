@@ -48,3 +48,11 @@ func NewZapLogger(cfg *config.Config) (*zap.Logger, error) {
 
 	return zapCfg.Build() //設定された全ての構成オプションを適用して、新しいロガーインスタンスを生成
 }
+
+// zap.Logger の主なメソッドの一部：
+// Info(msg string, fields ...zap.Field)：情報レベルのログメッセージを出力
+// Error(msg string, fields ...zap.Field)：エラーレベルのログメッセージを出力
+// Debug(msg string, fields ...zap.Field)：デバッグレベルのログメッセージを出力
+// Warn(msg string, fields ...zap.Field)：警告レベルのログメッセージを出力
+// Fatal(msg string, fields ...zap.Field)：致命的エラーレベルのログメッセージを出力し、プログラムを終了
+// Sync() error：バッファリングされたログエントリを出力先にフラッシュ

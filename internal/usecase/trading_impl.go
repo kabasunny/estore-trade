@@ -5,7 +5,7 @@ import (
 	"context"
 	"estore-trade/internal/config"
 	"estore-trade/internal/domain"
-	"estore-trade/internal/infrastructure/persistence/tachibana" // tachibana パッケージをインポート
+	"estore-trade/internal/infrastructure/persistence/tachibana"
 	"fmt"
 
 	"go.uber.org/zap"
@@ -20,7 +20,6 @@ type tradingUsecase struct {
 	config          *config.Config // configへの参照を保持
 }
 
-// NewTradingUsecase に config を追加
 func NewTradingUsecase(tachibanaClient tachibana.TachibanaClient, logger *zap.Logger, orderRepo domain.OrderRepository, accountRepo domain.AccountRepository, cfg *config.Config) *tradingUsecase {
 	return &tradingUsecase{
 		tachibanaClient: tachibanaClient,
@@ -37,11 +36,12 @@ func (uc *tradingUsecase) PlaceOrder(ctx context.Context, order *domain.Order) (
 
 	// config から ID/Password を取得
 	// Login はセッション管理を行うように修正済み
-	err := uc.tachibanaClient.Login(ctx, uc.config)
-	if err != nil {
-		uc.logger.Error("立花証券APIログインに失敗", zap.Error(err))
-		return nil, err
-	}
+	// 毎回ログインしない
+	// err := uc.tachibanaClient.Login(ctx, uc.config)
+	// if err != nil {
+	// 	uc.logger.Error("立花証券APIログインに失敗", zap.Error(err))
+	// 	return nil, err
+	// }
 
 	systemStatus := uc.tachibanaClient.GetSystemStatus()
 	if systemStatus.SystemState != "1" { //  仮にシステム状態が"1"なら稼働中

@@ -1,5 +1,4 @@
-// internal/infrastructure/persistence/tachibana/client_login.go
-
+// internal/infrastructure/persistence/tachibana/util_login.go
 package tachibana
 
 import (
@@ -40,13 +39,14 @@ func login(ctx context.Context, tc *TachibanaClientImple, userID, password strin
 	defer cancel()
 
 	// sendRequestを呼び出す（リトライ処理はsendRequest内で実施）
-	response, err := sendRequest(req) // reqを渡すように変更
+	response, err := sendRequest(req, 3) // 3回リトライ設定し送信
 	if err != nil {
 		return false, fmt.Errorf("login failed: %w", err)
 	}
 
 	// ... (以降は同じ) ...
 	if response["sResultCode"] != "0" {
+		// 変更点: エラーメッセージから "." を削除
 		tc.logger.Error("Login API returned an error", zap.String("result_code", response["sResultCode"].(string)), zap.String("result_text", response["sResultText"].(string))) //.(string)を追加
 		return false, fmt.Errorf("login API returned an error: %s - %s", response["sResultCode"], response["sResultText"])
 	}
