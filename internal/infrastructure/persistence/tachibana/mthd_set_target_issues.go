@@ -11,7 +11,7 @@ func (tc *TachibanaClientImple) SetTargetIssues(ctx context.Context, issueCodes 
 	}
 
 	// issueMap のフィルタリングと関連マップの削除
-	for issueCode := range tc.issueMap {
+	for issueCode := range tc.issueMap { // すべてのキー（銘柄コード）に対してループ
 		if _, exists := issueCodeSet[issueCode]; !exists {
 			delete(tc.issueMap, issueCode)
 			delete(tc.issueMarketMap, issueCode)

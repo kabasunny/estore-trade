@@ -16,7 +16,8 @@ import (
 	"estore-trade/internal/handler"
 	"estore-trade/internal/infrastructure/database/postgres"
 	"estore-trade/internal/infrastructure/logger/zapLogger"
-	"estore-trade/internal/infrastructure/persistence"
+	"estore-trade/internal/infrastructure/persistence/account"
+	"estore-trade/internal/infrastructure/persistence/order"
 	"estore-trade/internal/infrastructure/persistence/tachibana"
 	"estore-trade/internal/usecase"
 
@@ -63,8 +64,8 @@ func main() {
 	logger.Info("マスタデータのダウンロードに成功")
 
 	// 3. リポジトリの初期化
-	orderRepo := persistence.NewOrderRepository(db.DB())     // 注文情報を管理する
-	accountRepo := persistence.NewAccountRepository(db.DB()) // 口座情報を管理する
+	orderRepo := order.NewOrderRepository(db.DB())       // 注文情報を管理する
+	accountRepo := account.NewAccountRepository(db.DB()) // 口座情報を管理する
 
 	// 4. ユースケースの初期化
 	tradingUsecase := usecase.NewTradingUsecase(tachibanaClient, logger, orderRepo, accountRepo, cfg)

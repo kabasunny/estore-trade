@@ -48,9 +48,6 @@ func (tc *TachibanaClientImple) DownloadMasterData(ctx context.Context) error {
 		return err
 	}
 
-	tc.mu.Lock()
-	defer tc.mu.Unlock()
-
 	// マスタデータの更新
 	tc.systemStatus = m.systemStatus
 	tc.dateInfo = m.dateInfo
