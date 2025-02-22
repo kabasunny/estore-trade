@@ -1,5 +1,7 @@
 .env
 
 output/
+file_concat/
 
 list_files_with_content.py
+
