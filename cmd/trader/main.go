@@ -83,7 +83,7 @@ func main() {
 	}()
 
 	// 6. AutoTradingUsecase の初期化
-	autoTradingAlgorithm := &autotrading.AutoTradingAlgorithm{} // 実際のアルゴリズムのインスタンスを生成
+	autoTradingAlgorithm := &autotrading.AutoTradingAlgorithm{} // 実際のアルゴリズムのインスタンスを生成　未実装　最後に実装予定
 	autoTradingUsecase := autotrading.NewAutoTradingUsecase(tradingUsecase, autoTradingAlgorithm, logger, cfg, tradingUsecase.GetEventChannelReader())
 	go func() {
 		if err := autoTradingUsecase.Start(); err != nil {

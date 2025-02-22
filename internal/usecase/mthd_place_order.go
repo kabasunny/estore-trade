@@ -9,20 +9,24 @@ import (
 	"go.uber.org/zap"
 )
 
+// APIを使用して注文を実行し、必要な事前チェックを行う
 func (uc *tradingUsecase) PlaceOrder(ctx context.Context, order *domain.Order) (*domain.Order, error) {
+	// 注文のログを出力
 	uc.logger.Info("Placing order", zap.Any("order", order))
 
+	// システムの稼働状態を確認
 	systemStatus := uc.tachibanaClient.GetSystemStatus()
-	if systemStatus.SystemState != "1" { // 仮にシステム状態が"1"なら稼働中
+	if systemStatus.SystemState != "1" { // システム状態  0：閉局 1：開局 2：一時停止
 		return nil, fmt.Errorf("system is not in service")
 	}
+
 	// 銘柄情報のチェック
 	issue, ok := uc.tachibanaClient.GetIssueMaster(order.Symbol)
 	if !ok {
 		return nil, fmt.Errorf("invalid issue code: %s", order.Symbol)
 	}
 
-	// 売買単位のチェック
+	// 売買単位のチェック 売買単位の倍数であるかを確認
 	if order.Quantity%issue.TradingUnit != 0 {
 		return nil, fmt.Errorf("invalid order quantity. must be multiple of %d", issue.TradingUnit)
 	}
@@ -36,6 +40,7 @@ func (uc *tradingUsecase) PlaceOrder(ctx context.Context, order *domain.Order) (
 		return nil, fmt.Errorf("invalid order price: %f", order.Price)
 	}
 
+	// 立花証券APIを使用して注文を実行
 	placedOrder, err := uc.tachibanaClient.PlaceOrder(ctx, order)
 	if err != nil {
 		uc.logger.Error("立花証券API注文実行に失敗", zap.Error(err))
