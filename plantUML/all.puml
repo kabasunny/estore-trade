@@ -1,0 +1,147 @@
+@startuml
+skinparam monochrome true
+skinparam classAttributeIconSize 0
+
+' Define components
+actor User
+participant "main" as main
+participant "http.Server" as httpServer
+participant "TradingHandler" as tradingHandler
+participant "TradingUsecase" as tradingUsecase
+participant "TachibanaClient" as tachibanaClient
+participant "OrderRepository" as orderRepo
+participant "AccountRepository" as accountRepo
+participant "EventStream" as eventStream
+participant "AutoTradingUsecase" as autoTradingUsecase
+participant "AutoTradingAlgorithm" as autoTradingAlgorithm
+
+' Main initialization sequence
+activate main
+main -> main : LoadConfig, NewZapLogger,\nNewPostgresDB, NewTachibanaClient
+main -> tachibanaClient : Login
+activate tachibanaClient
+tachibanaClient --> main : Login result
+deactivate tachibanaClient
+main -> tachibanaClient : DownloadMasterData
+activate tachibanaClient
+tachibanaClient --> main : Master data
+deactivate tachibanaClient
+main -> orderRepo : NewOrderRepository
+activate orderRepo
+orderRepo --> main : OrderRepository instance
+deactivate orderRepo
+main -> accountRepo : NewAccountRepository
+activate accountRepo
+accountRepo --> main : AccountRepository instance
+deactivate accountRepo
+main -> tradingUsecase : NewTradingUsecase
+activate tradingUsecase
+tradingUsecase --> main : TradingUsecase instance
+deactivate tradingUsecase
+main -> eventStream : NewEventStream
+activate eventStream
+eventStream --> main : EventStream instance
+deactivate eventStream
+create autoTradingAlgorithm
+main -> autoTradingAlgorithm : new AutoTradingAlgorithm
+main -> autoTradingUsecase : NewAutoTradingUsecase
+activate autoTradingUsecase
+autoTradingUsecase --> main: autoTradingUsecase instance
+deactivate autoTradingUsecase
+main -> tradingHandler : NewTradingHandler
+activate tradingHandler
+tradingHandler --> main : TradingHandler instance
+deactivate tradingHandler
+
+' Start EventStream and AutoTradingUsecase
+main -> eventStream : Start
+activate eventStream
+main -> autoTradingUsecase : Start
+activate autoTradingUsecase
+
+' HTTP Server and Signal handling (concurrent)
+main -> httpServer : Start HTTP Server
+activate httpServer
+
+' Concurrent operations
+group Concurrently
+    ' User interaction with HTTP server
+    User -> httpServer : Send trade request
+    httpServer -> tradingHandler : HandleTrade
+    activate tradingHandler
+    tradingHandler -> tradingHandler : Validate order request
+    tradingHandler -> tradingUsecase : PlaceOrder
+    activate tradingUsecase
+
+    ' PlaceOrder within TradingUsecase
+    tradingUsecase -> tachibanaClient : GetSystemStatus
+    activate tachibanaClient
+    tachibanaClient --> tradingUsecase : System status
+    deactivate tachibanaClient
+    tradingUsecase -> tachibanaClient : GetIssueMaster
+    activate tachibanaClient
+    tachibanaClient --> tradingUsecase : Issue master data
+    deactivate tachibanaClient
+    tradingUsecase -> tachibanaClient : CheckPriceIsValid
+    activate tachibanaClient
+    tachibanaClient --> tradingUsecase : Price validity
+    deactivate tachibanaClient
+    tradingUsecase -> tachibanaClient : PlaceOrder
+    activate tachibanaClient
+    tachibanaClient --> tradingUsecase : Placed order
+    deactivate tachibanaClient
+    tradingUsecase -> orderRepo : CreateOrder
+    activate orderRepo
+    orderRepo --> tradingUsecase : Save order result
+    deactivate orderRepo
+    tradingUsecase --> tradingHandler : Placed order
+    deactivate tradingUsecase
+    tradingHandler --> httpServer : Respond to user
+    deactivate tradingHandler
+    httpServer --> User : Trade response
+    deactivate httpServer
+
+    ' EventStream processing
+    eventStream -> tachibanaClient : Receive event data
+    activate tachibanaClient
+    tachibanaClient --> eventStream : Event data
+    deactivate tachibanaClient
+    eventStream -> eventStream : Parse event
+    eventStream -> tradingUsecase : Send event via eventCh
+    activate tradingUsecase
+    tradingUsecase -> tradingUsecase : HandleOrderEvent
+    tradingUsecase -> orderRepo : UpdateOrderStatus (if EC event)
+    activate orderRepo
+    orderRepo --> tradingUsecase
+    deactivate orderRepo
+    deactivate tradingUsecase
+
+    ' AutoTradingUsecase processing
+    tradingUsecase -> autoTradingUsecase : Send event via eventCh
+    activate autoTradingUsecase
+    autoTradingUsecase -> autoTradingAlgorithm : GenerateSignal
+    activate autoTradingAlgorithm
+    autoTradingAlgorithm --> autoTradingUsecase : Signal
+    deactivate autoTradingAlgorithm
+    autoTradingUsecase -> autoTradingAlgorithm : CalculatePosition
+    activate autoTradingAlgorithm
+    autoTradingAlgorithm --> autoTradingUsecase : Position
+    deactivate autoTradingAlgorithm
+    autoTradingUsecase -> tradingUsecase : PlaceOrder (if signal indicates trade)
+    ' (PlaceOrder steps as above)
+    deactivate autoTradingUsecase
+end
+
+' Shutdown sequence (triggered by signal or error)
+main -> eventStream : Stop
+activate eventStream
+eventStream --> main
+deactivate eventStream
+main -> httpServer : Shutdown
+activate httpServer
+httpServer --> main
+deactivate httpServer
+main -> main : Close database connection, Sync logger
+
+deactivate main
+@enduml

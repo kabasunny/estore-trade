@@ -1,0 +1,60 @@
+@startuml
+skinparam monochrome true
+skinparam classAttributeIconSize 0
+
+participant "TachibanaClient" as tachibanaClient
+participant "EventStream" as eventStream
+participant "TradingUsecase" as tradingUsecase
+participant "config" as config
+
+group Login
+    tachibanaClient -> tachibanaClient : login (internal)
+end
+
+group DownloadMasterData
+    tachibanaClient -> tachibanaClient : Send request, process response
+end
+
+group PlaceOrder
+    tachibanaClient -> tachibanaClient : Send request, process response
+end
+
+group GetOrderStatus
+    tachibanaClient -> tachibanaClient : Send request, process response
+end
+
+group CancelOrder
+    tachibanaClient -> tachibanaClient : Send request, process response
+end
+
+group CheckPriceIsValid
+    tachibanaClient -> tachibanaClient : Check internal master data
+end
+
+group EventStream
+    eventStream -> tachibanaClient : Login
+    activate tachibanaClient
+    tachibanaClient --> eventStream
+    deactivate tachibanaClient
+     eventStream -> config: GetEventRid, GetEventBoardNo, GetEventEvtCmd
+    activate config
+    config --> eventStream
+    deactivate config
+    eventStream -> tachibanaClient: GetEventURL
+    activate tachibanaClient
+    tachibanaClient --> eventStream: EventURL
+    deactivate tachibanaClient
+    eventStream -> eventStream : Start message receiving loop (long polling)
+    eventStream -> tachibanaClient: ReceiveEventData
+    activate tachibanaClient
+    tachibanaClient --> eventStream: EventData
+    deactivate tachibanaClient
+    eventStream -> eventStream : Parse event
+    eventStream -> tradingUsecase : Send event via eventCh
+    activate tradingUsecase
+    tradingUsecase --> eventStream
+    deactivate tradingUsecase
+    eventStream -> eventStream: Stop
+end
+
+@enduml
