@@ -1,5 +1,5 @@
 @startuml
-top to bottom direction
+'top to bottom direction ' 全体を縦方向にする場合はこれを使う（今回はコメントアウト）
 
 skinparam packageTitleFontColor #ffffff
 skinparam packageTitleBackgroundColor #2E4372
@@ -18,308 +18,334 @@ skinparam interface {
   BorderColor #3399ff
 }
 
-' struct のスタイル (Go では class ではなく struct を使うため)
+' struct のスタイル
 skinparam struct {
   BackgroundColor #FFFFFF
   BorderColor #000080
 }
 
-' main.go は関数と依存関係のみで構成されるため、特に図示しない
-' main関数は各コンポーネントの初期化と依存性の注入を担当（コメントで表現）
 
-package "internal/config" {
-  struct "config.go" as config {
-    +LoadConfig() *Config
-  }
-  struct Config {
-    +TachibanaAPIKey    : string
-    +TachibanaAPISecret : string
-    +TachibanaBaseURL   : string
-    +DBHost             : string
-    +DBPort             : int
-    +DBUser             : string
-    +DBPassword         : string
-    +DBName             : string
-    +LogLevel           : string
-    +EventRid     : string
-    +EventBoardNo : string
-    +EventEvtCmd  : string
-  }
-}
-
-package "internal/domain" {
-   struct Order
-   struct Account
-   struct Position
-   struct OrderEvent
-
-  interface OrderRepository {
-    +CreateOrder(ctx context.Context, order *Order) error
-    +GetOrder(ctx context.Context, id string) (*Order, error)
-    +UpdateOrder(ctx context.Context, order *Order) error
-    +UpdateOrderStatus(ctx context.Context, orderID string, status string) error
-  }
-  interface AccountRepository {
-   +GetAccount(ctx context.Context, id string) (*Account, error)
-   +UpdateAccount(ctx context.Context, account *Account) error
-  }
-  ' struct "repository.go" as repository{}  repository.go はインターフェース定義なので不要
-}
-
-package "internal/handler" {
-  struct "trading.go" as handler {
-    +NewTradingHandler() *TradingHandler
-    +HandleTrade()
-  }
-  struct TradingHandler {
-    -tradingUsecase : usecase.TradingUsecase
-    -logger         : *zap.Logger
-  }
-}
-
-package "internal/infrastructure/database/postgres" {
-  struct "postgres.go" as postgres {
-    +NewPostgresDB() *PostgresDB
-    +Close() error
-    +DB() *sql.DB
-  }
-  struct PostgresDB {
-    -db     : *sql.DB
-    -logger : *zap.Logger
-  }
-}
-
-package "internal/infrastructure/logger/zapLogger" {
-  struct "zapLogger.go" as zapLogger {
-    +NewZapLogger() *zap.Logger
-  }
-}
-
-package "internal/infrastructure/persistence" {
-  struct "order_repository.go" as orderRepoImpl {
-    +NewOrderRepository() domain.OrderRepository
-    +CreateOrder() error
-    +GetOrder() (*Order, error)
-    +UpdateOrder() error
-    +UpdateOrderStatus() error
-  }
-
-  struct "account_repository.go" as accountRepoImpl {
-    +NewAccountRepository() domain.AccountRepository
-    +GetAccount() (*Account, error)
-    +UpdateAccount() error
-  }
-
-  package "tachibana" {
-    interface TachibanaClient {
-        +Login(ctx context.Context, userID, password string) (string, error)
-        +PlaceOrder(ctx context.Context, requestURL string, order *domain.Order) (*domain.Order, error)
-        +GetOrderStatus(ctx context.Context, requestURL string, orderID string) (*domain.Order, error)
-        +CancelOrder(ctx context.Context, requestURL string, orderID string) error
-        +ConnectEventStream(ctx context.Context) (<-chan domain.OrderEvent, error)
-        +DownloadMasterData(ctx context.Context, requestURL string) error
-        +GetSystemStatus() SystemStatus
-        +GetDateInfo() DateInfo
-        +GetCallPrice(unitNumber string) (CallPrice, bool)
-        +GetIssueMaster(issueCode string) (IssueMaster, bool)
+package "internal" {
+    package "config" {
+      struct Config {
+        +TachibanaAPIKey    : string
+        +TachibanaAPISecret : string
+        +TachibanaBaseURL   : string
+        +DBHost             : string
+        +DBPort             : int
+        +DBUser             : string
+        +DBPassword         : string
+        +DBName             : string
+        +LogLevel           : string
+        +EventRid     : string
+        +EventBoardNo : string
+        +EventEvtCmd  : string
+      }
+      struct "config.go" as config {
+        +LoadConfig() *Config
+      }
     }
 
-    ' struct "tachibana_client.go" as tachibanaClient  インターフェース定義なので不要
+    package "domain" {
+       struct Order
+       struct Account
+       struct Position
+       struct OrderEvent
 
-    struct "client_core.go" as clientCore {
-      +NewTachibanaClient() TachibanaClient
-      +Login() (string, error)
-      +getPNo() string
-      +sendRequest() (map[string]interface{}, error)
-      +ConnectEventStream() (<-chan domain.OrderEvent, error)
+      interface OrderRepository {
+        +CreateOrder(ctx context.Context, order *Order) error
+        +GetOrder(ctx context.Context, id string) (*Order, error)
+        +UpdateOrder(ctx context.Context, order *Order) error
+        +UpdateOrderStatus(ctx context.Context, orderID string, status string) error
+      }
+      interface AccountRepository {
+       +GetAccount(ctx context.Context, id string) (*Account, error)
+       +UpdateAccount(ctx context.Context, account *Account) error
+      }
     }
-     struct "client_login.go" as clientLogin {
-        +login() (string, error)
-     }
-     struct "client_order.go" as clientOrder {
+
+    package "handler" {
+      struct TradingHandler {
+        -tradingUsecase : usecase.TradingUsecase
+        -logger         : *zap.Logger
+      }
+      struct "trading.go" as handler {
+        +NewTradingHandler() *TradingHandler
+        +HandleTrade()
+      }
+    }
+
+  package "infrastructure" {
+      package "database" {
+        package "postgres" {
+          struct PostgresDB {
+            -db     : *sql.DB
+            -logger : *zap.Logger
+          }
+          struct "postgres.go" as postgres {
+            +NewPostgresDB() *PostgresDB
+            +Close() error
+            +DB() *sql.DB
+          }
+        }
+    }
+    package "logger"{
+        package "zapLogger" {
+          struct "zapLogger.go" as zapLogger {
+            +NewZapLogger() *zap.Logger
+          }
+        }
+      }
+
+    package "persistence" {
+        package "account"{
+            struct "account_repository.go" as accountRepoImpl {
+                +NewAccountRepository() domain.AccountRepository
+                +GetAccount() (*Account, error)
+                +UpdateAccount() error
+            }
+        }
+        package "order"{
+                struct "order_repository.go" as orderRepoImpl {
+                +NewOrderRepository() domain.OrderRepository
+                +CreateOrder() error
+                +GetOrder() (*Order, error)
+                +UpdateOrder() error
+                +UpdateOrderStatus() error
+            }
+        }
+
+      package "tachibana" {
+        interface TachibanaClient {
+            +Login(ctx context.Context, cfg interface{}) error
+            +PlaceOrder(ctx context.Context, order *domain.Order) (*domain.Order, error)
+            +GetOrderStatus(ctx context.Context, orderID string) (*domain.Order, error)
+            +CancelOrder(ctx context.Context, orderID string) error
+            +ConnectEventStream(ctx context.Context) (<-chan domain.OrderEvent, error)
+            +DownloadMasterData(ctx context.Context) error
+            +GetSystemStatus() SystemStatus
+            +GetDateInfo() DateInfo
+            +GetCallPrice(unitNumber string) (CallPrice, bool)
+            +GetIssueMaster(issueCode string) (IssueMaster, bool)
+            +GetIssueMarketMaster(issueCode, marketCode string) (IssueMarketMaster, bool)
+            +GetIssueMarketRegulation(issueCode, marketCode string) (IssueMarketRegulation, bool)
+            +GetOperationStatusKabu(listedMarket string, unit string) (OperationStatusKabu, bool)
+            +CheckPriceIsValid(issueCode string, price float64, isNextDay bool) (bool, error)
+            +SetTargetIssues(ctx context.Context, issueCodes []string) error
+        }
+
+
+         struct TachibanaClientImple {
+            -baseURL : *url.URL
+            -apiKey : string
+            -secret : string
+            -logger : *zap.Logger
+            -loggined : bool
+            -requestURL : string
+            -masterURL  : string
+            -priceURL   : string
+            -eventURL   : string
+            -expiry : time.Time
+            -mu : sync.RWMutex
+            -pNo        : int64
+            -pNoMu      : sync.Mutex
+            -systemStatus SystemStatus
+            -dateInfo     DateInfo
+            -callPriceMap map[string]CallPrice
+            -issueMap     map[string]IssueMaster
+            -issueMarketMap           map[string]map[string]IssueMarketMaster
+            -issueMarketRegulationMap map[string]map[string]IssueMarketRegulation
+            -operationStatusKabuMap   map[string]map[string]OperationStatusKabu
+            -targetIssueCodes         []string
+            -targetIssueCodesMu       sync.RWMutex
+          }
+          struct "fact_new_tachibana_client.go" as factTachibanaClient {
+            +NewTachibanaClient() TachibanaClient
+          }
+
+         struct "client_login.go" as clientLogin {
+            +login() (bool, error)
+         }
+         struct "client_order.go" as clientOrder {
+            +PlaceOrder() (*domain.Order, error)
+            +GetOrderStatus() (*domain.Order, error)
+            +CancelOrder() error
+         }
+
+         struct "client_master_data.go" as clientMasterData{
+            +DownloadMasterData() error
+            +GetSystemStatus() SystemStatus
+            +GetDateInfo() DateInfo
+            +GetCallPrice(unitNumber string) (CallPrice, bool)
+            +GetIssueMaster(issueCode string) (IssueMaster, bool)
+            +GetIssueMarketMaster(issueCode, marketCode string) (IssueMarketMaster, bool)
+            +GetIssueMarketRegulation(issueCode, marketCode string) (IssueMarketRegulation, bool)
+            +GetOperationStatusKabu(listedMarket string, unit string) (OperationStatusKabu, bool)
+            +CheckPriceIsValid(issueCode string, price float64, isNextDay bool) (bool, error)
+         }
+
+        struct "event_stream.go" as eventStream {
+          +NewEventStream() *EventStream
+          +Start() error
+          +Stop() error
+          +parseEvent() (*domain.OrderEvent, error)
+          +sendEvent()
+        }
+        struct EventStream {
+          -tachibanaClient : TachibanaClient
+          -config : *config.Config
+          -logger : *zap.Logger
+          -eventCh : chan<- domain.OrderEvent
+          -stopCh : chan struct{}
+          -conn : *http.Client
+          -req : *http.Request
+        }
+
+        struct "constants.go" as constants
+        struct "master.go" as master
+          struct CallPrice
+          struct DateInfo
+          struct IssueMaster
+          struct IssueMarketMaster
+          struct IssueMarketRegulation
+          struct OperationStatusKabu
+          struct SystemStatus
+
+        struct "utils.go" as utils
+      }
+    }
+  }
+
+    package "usecase" {
+      interface TradingUsecase {
+        +PlaceOrder(ctx context.Context, order *domain.Order) (*domain.Order, error)
+        +GetOrderStatus(ctx context.Context, orderID string) (*domain.Order, error)
+        +CancelOrder(ctx context.Context, orderID string) error
+        +GetEventChannelReader() <-chan domain.OrderEvent
+        +GetEventChannelWriter() chan<- domain.OrderEvent
+        +HandleOrderEvent(ctx context.Context, event *domain.OrderEvent) error
+      }
+
+      struct tradingUsecase {
+        -tachibanaClient : tachibana.TachibanaClient
+        -logger : *zap.Logger
+        -orderRepo : domain.OrderRepository
+        -accountRepo : domain.AccountRepository
+        -eventCh : chan domain.OrderEvent
+        -config          : *config.Config
+      }
+      struct "trading_impl.go" as tradingImpl {
+        +NewTradingUsecase() TradingUsecase
         +PlaceOrder() (*domain.Order, error)
         +GetOrderStatus() (*domain.Order, error)
         +CancelOrder() error
-     }
-
-     struct "client_master_data.go" as clientMasterData{
-        +DownloadMasterData() error
-        +GetSystemStatus() SystemStatus
-        +GetDateInfo() DateInfo
-        +GetCallPrice(unitNumber string) (CallPrice, bool)
-        +GetIssueMaster(issueCode string) (IssueMaster, bool)
-        +mapToStruct() error
-     }
-
-    struct TachibanaClientImple {
-      -baseURL : *url.URL
-      -apiKey : string
-      -secret : string
-      -logger : *zap.Logger
-      -requestURL : string
-      -expiry : time.Time
-      -mu : sync.RWMutex
-      -pNo        : int64
-      -pNoMu      : sync.Mutex
-      -systemStatus SystemStatus
-      -dateInfo     DateInfo
-      -callPriceMap map[string]CallPrice
-      -issueMap     map[string]IssueMaster
+        +GetEventChannelReader() <-chan domain.OrderEvent
+        +GetEventChannelWriter() chan<- domain.OrderEvent
+        +HandleOrderEvent() error
+      }
     }
 
-    struct "event_stream.go" as eventStream {
-      +NewEventStream() *EventStream
-      +Start() error
-      +Stop() error
-      +parseEvent() (*domain.OrderEvent, error)
-      +sendEvent()
-    }
-    struct EventStream {
-      -tachibanaClient : TachibanaClient
-      -config : *config.Config
-      -logger : *zap.Logger
-      -eventCh : chan<- domain.OrderEvent
-      -stopCh : chan struct{}
-      -conn : *http.Client
-      -req : *http.Request
-    }
-    struct "constants.go" as constants
-    struct "master.go" as master
-    struct "utils.go" as utils
-  }
-}
+    package "autotrading" {
+        interface AutoTradingUsecase {
+          +Start() error
+          +Stop() error
+          +HandleEvent(event domain.OrderEvent)
+        }
 
-package "internal/usecase" {
-  interface TradingUsecase {
-    +PlaceOrder(ctx context.Context, userID, password string, order *domain.Order) (*domain.Order, error)
-    +GetOrderStatus(ctx context.Context, userID, password string, orderID string) (*domain.Order, error)
-    +CancelOrder(ctx context.Context, userID, password string, orderID string) error
-    +GetEventChannelReader() <-chan domain.OrderEvent
-    +GetEventChannelWriter() chan<- domain.OrderEvent
-    +HandleOrderEvent(ctx context.Context, event *domain.OrderEvent) error
-  }
+        struct autoTradingUsecase{
+          -tradingUsecase       : usecase.TradingUsecase
+          -autoTradingAlgorithm : *AutoTradingAlgorithm
+          -logger               : *zap.Logger
+          -config               : *config.Config
+          -eventCh              : <-chan domain.OrderEvent
+        }
+        struct "autotrading_impl.go" as autotradingImpl {
+            +NewAutoTradingUsecase() AutoTradingUsecase
+            +Start() error
+            +Stop() error
+            +HandleEvent(event domain.OrderEvent)
+        }
 
-  struct "trading_impl.go" as tradingImpl {
-    +NewTradingUsecase() TradingUsecase
-    +PlaceOrder() (*domain.Order, error)
-    +GetOrderStatus() (*domain.Order, error)
-    +CancelOrder() error
-    +GetEventChannelReader() <-chan domain.OrderEvent
-    +GetEventChannelWriter() chan<- domain.OrderEvent
-    +HandleOrderEvent() error
-  }
-  struct tradingUsecase {
-    -tachibanaClient : tachibana.TachibanaClient
-    -logger : *zap.Logger
-    -orderRepo : domain.OrderRepository
-    -accountRepo : domain.AccountRepository
-    -eventCh : chan domain.OrderEvent
-  }
-}
-
-package "internal/autotrading" {
-    interface AutoTradingUsecase {
-      +Start() error
-      +Stop() error
-      +HandleEvent(event domain.OrderEvent)
-    }
-
-    struct "autotrading_impl.go" as autotradingImpl {
-        +NewAutoTradingUsecase() AutoTradingUsecase
-        +Start() error
-        +Stop() error
-        +HandleEvent(event domain.OrderEvent)
-    }
-    struct autoTradingUsecase{
-      -tradingUsecase       : usecase.TradingUsecase
-      -autoTradingAlgorithm : *AutoTradingAlgorithm
-      -logger               : *zap.Logger
-      -config               : *config.Config
-      -eventCh              : <-chan domain.OrderEvent
-    }
-    struct AutoTradingAlgorithm{
-        +GenerateSignal(event *domain.OrderEvent) (*Signal, error)
-        +CalculatePosition(signal *Signal) (*Position, error)
-    }
-    struct Signal{
-        Symbol string
-        Side   string
-    }
-    struct Position{
-        Symbol   string
-        Quantity int
-        Side     string
+        struct AutoTradingAlgorithm{
+            +GenerateSignal(event domain.OrderEvent) (*Signal, error)
+            +CalculatePosition(signal *Signal) (*Position, error)
+        }
+        struct Signal{
+            Symbol string
+            Side   string
+        }
+        struct Position{
+            Symbol   string
+            Quantity int
+            Side     string
+        }
     }
 }
 
-' 依存関係の記述。mainからの依存関係はコメントで補足
-' main -[#blue,dashed]-> config : uses
-' main -[#blue,dashed]-> zapLogger : uses
-' main -[#blue,dashed]-> postgres : uses
-' main -[#blue,dashed]-> clientCore : uses
-' main -[#blue,dashed]-> orderRepoImpl : uses
-' main -[#blue,dashed]-> accountRepoImpl : uses
-' main -[#blue,dashed]-> tradingImpl : uses
-' main -[#blue,dashed]-> eventStream : uses
-' main -[#blue,dashed]-> handler : uses
-' main -[#blue,dashed]-> autotradingImpl : uses
 
-' note left of main
-'   main関数は、
-'   各コンポーネントを
-'   初期化し、
-'   依存関係を注入する
-' end note
+' 依存関係の記述
+
+config -down- Config
+
+'--- internal 縦方向の配置 ---
+config -down- domain
+domain -down- handler
+handler -down- infrastructure
+infrastructure -down- usecase
+usecase -down- autotrading
+
+'--- infrastructure 縦方向の配置---
+postgres -down- zapLogger
+zapLogger -down- orderRepoImpl
+orderRepoImpl -down- accountRepoImpl
+accountRepoImpl -down- factTachibanaClient
+factTachibanaClient -down- clientLogin
+clientLogin -down- clientOrder
+clientOrder -down- clientMasterData
+clientMasterData -down- eventStream
+eventStream -down- constants
+constants -down- master
+master -down- utils
 
 
-handler -[#blue,dashed]-> tradingImpl : uses
+TradingHandler -[#blue,dashed]-> tradingImpl : uses
 
-tradingImpl .[#green,dotted]|> TradingUsecase
+tradingImpl ..|> TradingUsecase : implements
+tradingImpl --> tachibana.TachibanaClient : uses
+tradingImpl --> orderRepoImpl : uses
+tradingImpl --> accountRepoImpl : uses
 
-tradingImpl -[#blue,dashed]-> clientCore : uses
-tradingImpl -[#blue,dashed]-> orderRepoImpl : uses
-tradingImpl -[#blue,dashed]-> accountRepoImpl : uses
+autotradingImpl ..|> AutoTradingUsecase : implements
+autotradingImpl --> tradingImpl: uses
 
-autotradingImpl ..|> AutoTradingUsecase
-autotradingImpl -[#blue,dashed]-> tradingImpl: uses
+factTachibanaClient --> config : uses
+factTachibanaClient --> zapLogger : uses
+factTachibanaClient ..> TachibanaClientImple : creates
+TachibanaClientImple ..|> TachibanaClient : implements
 
-clientCore .[#green,dotted]|> TachibanaClient
-clientCore -[#blue,dashed]-> config : uses
-clientCore -[#blue,dashed]-> zapLogger : uses
-clientLogin -[#blue,dashed]-> clientCore : uses
-clientOrder -[#blue,dashed]-> clientCore : uses
-clientMasterData -[#blue,dashed]-> clientCore : uses
+' clientLogin --> TachibanaClientImple : uses 'コメントアウト
+' clientOrder --> TachibanaClientImple : uses 'コメントアウト
+' clientMasterData --> TachibanaClientImple : uses 'コメントアウト
 
-eventStream -[#blue,dashed]-> config : uses
-eventStream -[#blue,dashed]-> zapLogger : uses
-eventStream -[#blue,dashed]-> clientCore : uses
-eventStream -[#blue,dashed]-> tradingImpl : "sends events"
+eventStream --> config : uses
+eventStream --> zapLogger : uses
+eventStream --> tachibana.TachibanaClient : uses
+' eventStream --> tradingImpl : sends events 'コメントアウト
 
-orderRepoImpl .[#green,dotted]|> OrderRepository
-accountRepoImpl .[#green,dotted]|> AccountRepository
+orderRepoImpl ..|> OrderRepository :implements
+accountRepoImpl ..|> AccountRepository : implements
 
-postgres -[#blue,dashed]-> config : uses
-postgres -[#blue,dashed]-> zapLogger : uses
+postgres --> config : uses
+postgres --> zapLogger : uses
 
-zapLogger -[#blue,dashed]-> config : uses
-
-config -- Config  : composition
-'model -- Order
-'model -- Account
-'model -- Position
-'model -- OrderEvent
-'↑ドメインモデルは多数あるので省略
-
-tachibanaClient .[#green,dotted]|> TachibanaClient
-
-usecase.TradingUsecase -[#red,plain]-> OrderRepository : uses
-usecase.TradingUsecase -[#red,plain]-> AccountRepository: uses
+zapLogger --> config : uses
 
 legend
   |= Symbol |= Type |= Description |
-  '|<#lightblue>| Main | main.goの依存関係|  main.go はシンプルな依存性注入の表現にとどめる
-  |<#lightgreen>| Implementation | インターフェースの実装 |
-  |<#red>       | Interface Usage| インターフェースの利用 |
-  |<#blue,dashed>| Uses | 依存関係 (点線) |
+  |<#CCFFFF>| Interface | インターフェース |
+  |<#FFFFFF>| Struct | 構造体 |
+  | --> | Uses | 依存関係 |
+  | ..> | Creates | 生成 |
+  | ..|> | Implements | 実装 |
 end legend
 @enduml
