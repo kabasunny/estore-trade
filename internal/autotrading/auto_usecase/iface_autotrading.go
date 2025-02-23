@@ -1,4 +1,4 @@
-package autotrading
+package auto_usecase
 
 import (
 	"estore-trade/internal/domain" // ドメインモデルをインポート

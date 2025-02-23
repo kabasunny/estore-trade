@@ -11,7 +11,8 @@ import (
 	"syscall"
 	"time"
 
-	"estore-trade/internal/autotrading"
+	"estore-trade/internal/autotrading/auto_algorithm"
+	"estore-trade/internal/autotrading/auto_usecase"
 	"estore-trade/internal/config"
 	"estore-trade/internal/handler"
 	"estore-trade/internal/infrastructure/database/postgres"
@@ -83,8 +84,8 @@ func main() {
 	}()
 
 	// 6. AutoTradingUsecase の初期化
-	autoTradingAlgorithm := &autotrading.AutoTradingAlgorithm{} // 実際のアルゴリズムのインスタンスを生成　未実装　最後に実装予定
-	autoTradingUsecase := autotrading.NewAutoTradingUsecase(tradingUsecase, autoTradingAlgorithm, logger, cfg, tradingUsecase.GetEventChannelReader())
+	autoTradingAlgorithm := &auto_algorithm.AutoTradingAlgorithm{} // 実際のアルゴリズムのインスタンスを生成　未実装　最後に実装予定
+	autoTradingUsecase := auto_usecase.NewAutoTradingUsecase(tradingUsecase, autoTradingAlgorithm, logger, cfg, tradingUsecase.GetEventChannelReader())
 	go func() {
 		if err := autoTradingUsecase.Start(); err != nil {
 			logger.Error("AutoTradingUsecase error", zap.Error(err))

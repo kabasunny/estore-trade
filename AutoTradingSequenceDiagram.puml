@@ -1,0 +1,53 @@
+@startuml
+participant "Client" as C
+participant "TradingHandler" as H
+participant "AutoTradingUsecase" as AU
+participant "TradingUsecase" as TU
+participant "AutoTradingAlgorithm" as AA
+participant "TachibanaClient" as TA
+participant "OrderRepository" as OR
+participant "EventChannel" as EC
+
+activate C
+
+C ->> EC : Subscribe to Order Events
+activate EC
+EC -->> C: Subscription Confirmation
+
+...Later, Tachibana API sends an event...
+TA ->> EC : Send OrderEvent (e.g., EC)
+activate TA
+
+EC ->> AU : Forward OrderEvent
+activate AU
+
+AU -> AA : GenerateSignal(OrderEvent)
+activate AA
+AA --> AU : Signal
+deactivate AA
+
+AU -> AA : CalculatePosition(Signal)
+activate AA
+AA --> AU : Position
+deactivate AA
+
+AU -> TU : PlaceOrder(Order)
+activate TU
+
+TU -> TA : PlaceOrder (to Tachibana API)
+activate TA
+TA --> TU : Order Response (e.g., Order ID)
+deactivate TA
+
+TU -> OR : CreateOrder(Order)
+activate OR
+OR --> TU : Result
+deactivate OR
+TU --> AU : Order, Error
+deactivate TU
+
+AU --> EC: (Optional) New Order Info
+deactivate AU
+deactivate EC
+deactivate C
+@enduml

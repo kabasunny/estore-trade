@@ -3,26 +3,12 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"estore-trade/internal/domain"
-	"estore-trade/internal/usecase"
 
 	"go.uber.org/zap"
 )
-
-type TradingHandler struct {
-	tradingUsecase usecase.TradingUsecase
-	logger         *zap.Logger
-}
-
-func NewTradingHandler(tradingUsecase usecase.TradingUsecase, logger *zap.Logger) *TradingHandler {
-	return &TradingHandler{
-		tradingUsecase: tradingUsecase,
-		logger:         logger,
-	}
-}
 
 // HandleTrade は、"/trade" エンドポイントへのPOSTリクエストを処理 (必要に応じて残す)
 func (h *TradingHandler) HandleTrade(w http.ResponseWriter, r *http.Request) {
@@ -65,12 +51,4 @@ func (h *TradingHandler) HandleTrade(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.logger.Info("Order placed successfully", zap.String("order_id", placedOrder.ID))
-}
-
-func validateOrderRequest(order *domain.Order) error {
-	if order.Quantity <= 0 {
-		return fmt.Errorf("invalid order quantity: %d", order.Quantity)
-	}
-	// 他のバリデーションルール...
-	return nil
 }
