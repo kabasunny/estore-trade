@@ -1,8 +1,10 @@
 package auto_algorithm
 
-import "estore-trade/internal/autotrading/auto_model"
+import (
+	"estore-trade/internal/domain"
+)
 
-func (a *AutoTradingAlgorithm) CalculatePosition(signal *auto_model.Signal) (*auto_model.Position, error) {
+func (a *AutoTradingAlgorithm) CalculatePosition(signal *domain.Signal) (*domain.Position, error) {
 	// positionを計算
-	return &auto_model.Position{}, nil //　仮
+	return &domain.Position{}, nil //　仮
 }

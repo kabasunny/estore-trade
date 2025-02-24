@@ -8,7 +8,7 @@ import (
 )
 
 // 仮実装.　tachibanaClientからデータを取得する
-func getMarketData(ctx context.Context, client tachibana.TachibanaClient, issueCodes []string) ([]marketDataItem, error) {
+func GetMarketData(ctx context.Context, client tachibana.TachibanaClient, issueCodes []string) ([]marketDataItem, error) {
 	// ここに実際には、tachibanaClient.CLMMfdsGetMarketPrice()を呼び出してデータを取得するコードを記述
 	// (今はモックデータ)
 	requestURL, err := client.GetRequestURL()

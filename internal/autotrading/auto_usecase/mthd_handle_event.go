@@ -17,7 +17,7 @@ func (a *autoTradingUsecase) HandleEvent(event domain.OrderEvent) {
 		a.logger.Error("Signal generate error", zap.Error(err))
 	}
 
-	if signal.ShouldTrade() { // シグナルに基づいて取引を行うか判断
+	if ShouldTrade(signal) { // シグナルに基づいて取引を行うか判断
 		// 3. 資金リスク管理を行った上のポジションの決定
 		position, err := a.autoTradingAlgorithm.CalculatePosition(signal)
 		if err != nil {

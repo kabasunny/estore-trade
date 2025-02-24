@@ -1,5 +1,5 @@
 // internal/batch/signal/generate.go
-package signal
+package batch
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// 銘柄リストに基づいて売買シグナルを生成する
+// Generate は、銘柄リストに基づいて売買シグナルを生成する
 func Generate(ctx context.Context, logger *zap.Logger, targetIssues []domain.TargetIssue) ([]domain.Signal, error) {
 	// TODO: 実際には、外部の Python プロセスを呼び出すか、
 	//       auto_algorithm.AutoTradingAlgorithm.GenerateSignal() を呼び出す

@@ -1,25 +1,17 @@
-// internal/batch/ranking/calculate.go
+// internal/batch/ranking/util_calculate_ranking.go
 package ranking
 
 import (
 	"context"
 	"estore-trade/internal/domain"
-	"estore-trade/internal/infrastructure/persistence/tachibana" //tachibanaClientを使うため
+
+	//"estore-trade/internal/infrastructure/persistence/tachibana" //tachibanaClientを使うため　不要
+	"sort" //追加
 	"time"
 )
 
 // CalculateRanking は売買代金ランキングを計算し、上位N件の銘柄リストを返す
-func CalculateRanking(ctx context.Context, client tachibana.TachibanaClient) ([]domain.Ranking, error) {
-	// 1. 全銘柄コードの取得 (TODO: 実際にはマスタデータから取得)
-	//    allIssueCodes := getAllIssueCodes(client) // 全銘柄コードを取得する関数 (仮)
-	allIssueCodes := []string{"7203", "8306", "9432"} // トヨタ、UFJ、NTTのコードを仮で使う
-
-	// 2. 株価・出来高の取得 (TODO: 実際には CLMMfdsGetMarketPrice を使う)
-	marketData, err := getMarketData(ctx, client, allIssueCodes)
-	if err != nil {
-		return nil, err
-	}
-
+func CalculateRanking(ctx context.Context, marketData []marketDataItem) ([]domain.Ranking, error) { //tachibanaClientを削除
 	// 3. 売買代金の計算とランキング作成
 	var ranking []domain.Ranking
 	for _, data := range marketData {
@@ -32,7 +24,15 @@ func CalculateRanking(ctx context.Context, client tachibana.TachibanaClient) ([]
 		})
 	}
 
-	// TODO: 売買代金で降順にソート (ここでは省略)
+	// 売買代金で降順にソート
+	sort.Slice(ranking, func(i, j int) bool {
+		return ranking[i].TradingValue > ranking[j].TradingValue // 大小を逆にすることで降順
+	})
+
+	// ランキングに順位を付与
+	for i := range ranking {
+		ranking[i].Rank = i + 1
+	}
 
 	return ranking, nil
 }
