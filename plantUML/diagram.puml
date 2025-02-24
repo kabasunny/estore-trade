@@ -25,12 +25,20 @@ skinparam struct {
 }
 
 
+package "cmd" {
+  package "trader"{
+        struct main
+    }
+}
+
 package "internal" {
     package "config" {
       struct Config {
         +TachibanaAPIKey    : string
         +TachibanaAPISecret : string
         +TachibanaBaseURL   : string
+        +TachibanaUserID    : string
+        +TachibanaPassword  : string
         +DBHost             : string
         +DBPort             : int
         +DBUser             : string
@@ -40,8 +48,9 @@ package "internal" {
         +EventRid     : string
         +EventBoardNo : string
         +EventEvtCmd  : string
+        +HTTPPort     : int
       }
-      struct "config.go" as config {
+      struct "util_login_config.go" as config {
         +LoadConfig() *Config
       }
     }
@@ -69,10 +78,11 @@ package "internal" {
         -tradingUsecase : usecase.TradingUsecase
         -logger         : *zap.Logger
       }
-      struct "trading.go" as handler {
+      struct "fact_new_trading handler.go" as handler {
         +NewTradingHandler() *TradingHandler
         +HandleTrade()
       }
+      struct "util_validate_order_request.go"
     }
 
   package "infrastructure" {
@@ -91,7 +101,7 @@ package "internal" {
     }
     package "logger"{
         package "zapLogger" {
-          struct "zapLogger.go" as zapLogger {
+          struct "fact_new_zapLogger.go" as zapLogger {
             +NewZapLogger() *zap.Logger
           }
         }
@@ -99,19 +109,26 @@ package "internal" {
 
     package "persistence" {
         package "account"{
-            struct "account_repository.go" as accountRepoImpl {
+            struct accountRepository {
+                 -db : *sql.DB
+             }
+            struct "fact_new_account_repository.go" as accountRepoImpl {
                 +NewAccountRepository() domain.AccountRepository
                 +GetAccount() (*Account, error)
                 +UpdateAccount() error
+                +getPositions() ([]domain.Position, error)
             }
         }
         package "order"{
-                struct "order_repository.go" as orderRepoImpl {
-                +NewOrderRepository() domain.OrderRepository
-                +CreateOrder() error
-                +GetOrder() (*Order, error)
-                +UpdateOrder() error
-                +UpdateOrderStatus() error
+            struct orderRepository {
+                -db : *sql.DB
+            }
+            struct "fact_new_order_repository.go" as orderRepoImpl {
+            +NewOrderRepository() domain.OrderRepository
+            +CreateOrder() error
+            +GetOrder() (*Order, error)
+            +UpdateOrder() error
+            +UpdateOrderStatus() error
             }
         }
 
@@ -121,7 +138,11 @@ package "internal" {
             +PlaceOrder(ctx context.Context, order *domain.Order) (*domain.Order, error)
             +GetOrderStatus(ctx context.Context, orderID string) (*domain.Order, error)
             +CancelOrder(ctx context.Context, orderID string) error
-            +ConnectEventStream(ctx context.Context) (<-chan domain.OrderEvent, error)
+            +ConnectEventStream(ctx context.Context) (<-chan *domain.OrderEvent, error)
+            +GetRequestURL() (string, error)
+            +GetMasterURL() (string, error)
+            +GetPriceURL() (string, error)
+            +GetEventURL() (string, error)
             +DownloadMasterData(ctx context.Context) error
             +GetSystemStatus() SystemStatus
             +GetDateInfo() DateInfo
@@ -163,16 +184,13 @@ package "internal" {
             +NewTachibanaClient() TachibanaClient
           }
 
-         struct "client_login.go" as clientLogin {
-            +login() (bool, error)
-         }
-         struct "client_order.go" as clientOrder {
-            +PlaceOrder() (*domain.Order, error)
-            +GetOrderStatus() (*domain.Order, error)
-            +CancelOrder() error
-         }
+          struct "util_login.go" as utilLogin
+          struct "mthd_login.go" as mthdLogin
+          struct "mthd_place_order.go" as mthdPlaceOrder
+          struct "mthd_get_order_status.go" as mthdGetOrderStatus
+          struct "mthd_cancel_order.go" as mthdCancelOrder
 
-         struct "client_master_data.go" as clientMasterData{
+         struct "mthd_download_master_data.go" as mthdDownloadMasterData{
             +DownloadMasterData() error
             +GetSystemStatus() SystemStatus
             +GetDateInfo() DateInfo
@@ -184,34 +202,60 @@ package "internal" {
             +CheckPriceIsValid(issueCode string, price float64, isNextDay bool) (bool, error)
          }
 
-        struct "event_stream.go" as eventStream {
-          +NewEventStream() *EventStream
-          +Start() error
-          +Stop() error
-          +parseEvent() (*domain.OrderEvent, error)
-          +sendEvent()
-        }
-        struct EventStream {
-          -tachibanaClient : TachibanaClient
-          -config : *config.Config
-          -logger : *zap.Logger
-          -eventCh : chan<- domain.OrderEvent
-          -stopCh : chan struct{}
-          -conn : *http.Client
-          -req : *http.Request
-        }
+        struct "mthd_event_stream.go"
+        struct "mthd_new_event_stream.go" as mthdNewEventStream
+        struct "mthd_start_event_stream.go" as mthdStartEventStream
+        struct "mthd_stop_event_stream.go" as mthdStopEventStream
+        struct "mthd_parse_event.go" as mthdParseEvent
+        struct "mthd_send_event.go" as mthdSendEvent
 
         struct "constants.go" as constants
-        struct "master.go" as master
+        struct "strct_call_price.go" as strctCallPrice
           struct CallPrice
-          struct DateInfo
-          struct IssueMaster
-          struct IssueMarketMaster
-          struct IssueMarketRegulation
-          struct OperationStatusKabu
-          struct SystemStatus
+        struct "strct_date_info.go" as strctDateInfo
+            struct DateInfo
+        struct "strct_issue_master.go" as strctIssueMaster
+            struct IssueMaster
+        struct "strct_issue_market_master.go" as strctIssueMarketMaster
+            struct IssueMarketMaster
+        struct "strct_issue_market_regulation.go" as strctIssueMarketRegulation
+            struct IssueMarketRegulation
+        struct "strct_operation_status_kabu.go" as strctOperationStatusKabu
+            struct OperationStatusKabu
+        struct "strct_system_status.go" as strctSystemStatus
+            struct SystemStatus
+        struct "strct_master_data_manager.go" as strctMasterDataManager
+        struct "strct_event_stream.go" as strctEventStream
+             struct EventStream {
+              -tachibanaClient : TachibanaClient
+              -config : *config.Config
+              -logger : *zap.Logger
+              -eventCh : chan<- domain.OrderEvent
+              -stopCh : chan struct{}
+              -conn : *http.Client
+              -req : *http.Request
+            }
 
-        struct "utils.go" as utils
+        struct "util_format_sd_date.go" as utilFormatSDDate
+        struct "util_send_request.go" as utilSendRequest
+        struct "util_process_response.go" as utilProcessResponse
+        struct "util_retry_do.go" as utilRetryDo
+        struct "util_map_to_struct.go" as utilMapToStruct
+        struct "util_is_valid_price.go" as utilIsValidPrice
+        struct "util_contains.go" as utilContains
+        struct "mthd_get_request_url.go" as mthdGetRequestURL
+        struct "mthd_get_master_url.go" as mthdGetMasterURL
+        struct "mthd_get_price_url.go" as mthdGetPriceURL
+        struct "mthd_get_event_url.go" as mthdGetEventURL
+        struct "mthd_get_system_status.go" as mthdGetSystemStatus
+        struct "mthd_get_date_info.go" as mthdGetDateInfo
+        struct "mthd_get_call_price.go" as mthdGetCallPrice
+        struct "mthd_get_issue_master.go" as mthdGetIssueMaster
+        struct "mthd_get_issue_market_master.go" as mthdGetIssueMarketMaster
+        struct "mthd_get_issue_market_regulation.go" as mthdGetIssueMarketRegulation
+        struct "mthd_get_operation_status_kabu.go" as mthdGetOperationStatusKabu
+        struct "mthd_set_target_issues.go" as mthdSetTargetIssues
+        struct "mthd_get_p_no.go" as mthdGetPNo
       }
     }
   }
@@ -234,7 +278,7 @@ package "internal" {
         -eventCh : chan domain.OrderEvent
         -config          : *config.Config
       }
-      struct "trading_impl.go" as tradingImpl {
+      struct "fact_new_trading_usecase.go" as tradingImpl {
         +NewTradingUsecase() TradingUsecase
         +PlaceOrder() (*domain.Order, error)
         +GetOrderStatus() (*domain.Order, error)
@@ -246,38 +290,48 @@ package "internal" {
     }
 
     package "autotrading" {
-        interface AutoTradingUsecase {
-          +Start() error
-          +Stop() error
-          +HandleEvent(event domain.OrderEvent)
-        }
+        package "auto_usecase"{
+            interface AutoTradingUsecase {
+              +Start() error
+              +Stop() error
+              +HandleEvent(event domain.OrderEvent)
+            }
 
-        struct autoTradingUsecase{
-          -tradingUsecase       : usecase.TradingUsecase
-          -autoTradingAlgorithm : *AutoTradingAlgorithm
-          -logger               : *zap.Logger
-          -config               : *config.Config
-          -eventCh              : <-chan domain.OrderEvent
-        }
-        struct "autotrading_impl.go" as autotradingImpl {
-            +NewAutoTradingUsecase() AutoTradingUsecase
-            +Start() error
-            +Stop() error
-            +HandleEvent(event domain.OrderEvent)
-        }
+            struct autoTradingUsecase{
+              -tradingUsecase       : usecase.TradingUsecase
+              -autoTradingAlgorithm : *AutoTradingAlgorithm
+              -logger               : *zap.Logger
+              -config               : *config.Config
+              -eventCh              : <-chan domain.OrderEvent
+            }
+            struct "fact_new_autotrading_usecase.go" as autotradingImpl {
+                +NewAutoTradingUsecase() AutoTradingUsecase
+                +Start() error
+                +Stop() error
+                +HandleEvent(event domain.OrderEvent)
+            }
+         }
 
-        struct AutoTradingAlgorithm{
-            +GenerateSignal(event domain.OrderEvent) (*Signal, error)
-            +CalculatePosition(signal *Signal) (*Position, error)
-        }
-        struct Signal{
-            Symbol string
-            Side   string
-        }
-        struct Position{
-            Symbol   string
-            Quantity int
-            Side     string
+        package "auto_algorithm"{
+            struct AutoTradingAlgorithm{
+                +GenerateSignal(event domain.OrderEvent) (*Signal, error)
+                +CalculatePosition(signal *Signal) (*Position, error)
+            }
+            struct "mthd_generate_signal.go" as mthdGenerateSignal
+            struct "mthd_culculate_position.go" as mthdCulculatePosition
+       }
+
+       package "auto_model"{
+            struct Signal{
+                Symbol string
+                Side   string
+            }
+            struct Position{
+                Symbol   string
+                Quantity int
+                Side     string
+            }
+            struct "mthd_should_trade.go" as mthdShouldTrade
         }
     }
 }
@@ -299,13 +353,52 @@ postgres -down- zapLogger
 zapLogger -down- orderRepoImpl
 orderRepoImpl -down- accountRepoImpl
 accountRepoImpl -down- factTachibanaClient
-factTachibanaClient -down- clientLogin
-clientLogin -down- clientOrder
-clientOrder -down- clientMasterData
-clientMasterData -down- eventStream
-eventStream -down- constants
-constants -down- master
-master -down- utils
+factTachibanaClient -down- utilLogin
+utilLogin -down- mthdLogin
+mthdLogin -down- mthdPlaceOrder
+mthdPlaceOrder -down- mthdGetOrderStatus
+mthdGetOrderStatus -down- mthdCancelOrder
+mthdCancelOrder -down- mthdDownloadMasterData
+mthdDownloadMasterData -down- mthdNewEventStream
+mthdNewEventStream -down- mthdStartEventStream
+mthdStartEventStream -down- mthdStopEventStream
+mthdStopEventStream -down- mthdParseEvent
+mthdParseEvent -down- mthdSendEvent
+mthdSendEvent -down- constants
+constants -down- strctCallPrice
+strctCallPrice -down- strctDateInfo
+strctDateInfo -down- strctIssueMaster
+strctIssueMaster -down- strctIssueMarketMaster
+strctIssueMarketMaster -down- strctIssueMarketRegulation
+strctIssueMarketRegulation -down- strctOperationStatusKabu
+strctOperationStatusKabu -down- strctSystemStatus
+strctSystemStatus -down- strctMasterDataManager
+strctMasterDataManager -down- strctEventStream
+strctEventStream -down- utilFormatSDDate
+utilFormatSDDate -down- utilSendRequest
+utilSendRequest -down- utilProcessResponse
+utilProcessResponse -down- utilRetryDo
+utilRetryDo -down- utilMapToStruct
+utilMapToStruct -down- utilIsValidPrice
+utilIsValidPrice -down- utilContains
+utilContains -down- mthdGetRequestURL
+mthdGetRequestURL -down- mthdGetMasterURL
+mthdGetMasterURL -down- mthdGetPriceURL
+mthdGetPriceURL -down- mthdGetEventURL
+mthdGetEventURL -down- mthdGetSystemStatus
+mthdGetSystemStatus -down- mthdGetDateInfo
+mthdGetDateInfo -down- mthdGetCallPrice
+mthdGetCallPrice -down- mthdGetIssueMaster
+mthdGetIssueMaster -down- mthdGetIssueMarketMaster
+mthdGetIssueMarketMaster -down- mthdGetIssueMarketRegulation
+mthdGetIssueMarketRegulation -down- mthdGetOperationStatusKabu
+mthdGetOperationStatusKabu -down- mthdSetTargetIssues
+mthdSetTargetIssues -down- mthdGetPNo
+
+'--- autotrading 縦方向の配置---
+autotradingImpl -down- mthdGenerateSignal
+mthdGenerateSignal -down- mthdCulculatePosition
+mthdCulculatePosition -down- mthdShouldTrade
 
 
 TradingHandler -[#blue,dashed]-> tradingImpl : uses
@@ -327,9 +420,9 @@ TachibanaClientImple ..|> TachibanaClient : implements
 ' clientOrder --> TachibanaClientImple : uses 'コメントアウト
 ' clientMasterData --> TachibanaClientImple : uses 'コメントアウト
 
-eventStream --> config : uses
-eventStream --> zapLogger : uses
-eventStream --> tachibana.TachibanaClient : uses
+mthdNewEventStream --> config : uses
+mthdNewEventStream --> zapLogger : uses
+mthdNewEventStream --> tachibana.TachibanaClient : uses
 ' eventStream --> tradingImpl : sends events 'コメントアウト
 
 orderRepoImpl ..|> OrderRepository :implements
@@ -339,6 +432,17 @@ postgres --> config : uses
 postgres --> zapLogger : uses
 
 zapLogger --> config : uses
+
+main -down-> config
+main -down-> zapLogger
+main -down-> postgres
+main -down-> factTachibanaClient
+main -down-> orderRepoImpl
+main -down-> accountRepoImpl
+main -down-> tradingImpl
+main -down-> mthdNewEventStream
+main -down-> autotradingImpl
+main -down-> handler
 
 legend
   |= Symbol |= Type |= Description |
