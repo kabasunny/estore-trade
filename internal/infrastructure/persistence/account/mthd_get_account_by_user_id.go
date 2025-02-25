@@ -1,4 +1,4 @@
-// internal/infrastructure/persistence/account/mthd_get_account.go
+// internal/infrastructure/persistence/account/mthd_get_account_by_user_id.go
 package account
 
 import (
@@ -7,13 +7,13 @@ import (
 	"estore-trade/internal/domain"
 )
 
-func (r *accountRepository) GetAccount(ctx context.Context, id string) (*domain.Account, error) {
+func (r *accountRepository) GetAccountByUserID(ctx context.Context, userID string) (*domain.Account, error) {
 	query := `
         SELECT id, user_id, account_type, balance, available_balance, margin, created_at, updated_at
         FROM accounts
-        WHERE id = $1
+        WHERE user_id = $1
     `
-	row := r.db.QueryRowContext(ctx, query, id)
+	row := r.db.QueryRowContext(ctx, query, userID)
 
 	account := &domain.Account{}
 	err := row.Scan(
@@ -28,12 +28,12 @@ func (r *accountRepository) GetAccount(ctx context.Context, id string) (*domain.
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, nil
+			return nil, nil // アカウントが存在しない場合
 		}
 		return nil, err
 	}
 
-	positions, err := r.getPositions(ctx, id)
+	positions, err := r.getPositions(ctx, account.ID) // accountID を使用
 	if err != nil {
 		return nil, err
 	}
