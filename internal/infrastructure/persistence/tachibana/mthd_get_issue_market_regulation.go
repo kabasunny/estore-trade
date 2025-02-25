@@ -1,7 +1,9 @@
 package tachibana
 
+import "estore-trade/internal/domain"
+
 // GetIssueMarketRegulation は銘柄コードと市場コードに対応する規制情報を返す
-func (tc *TachibanaClientImple) GetIssueMarketRegulation(issueCode, marketCode string) (IssueMarketRegulation, bool) {
+func (tc *TachibanaClientImple) GetIssueMarketRegulation(issueCode, marketCode string) (domain.IssueMarketRegulation, bool) {
 	tc.mu.RLock()
 	defer tc.mu.RUnlock()
 
@@ -10,14 +12,14 @@ func (tc *TachibanaClientImple) GetIssueMarketRegulation(issueCode, marketCode s
 	if len(tc.targetIssueCodes) > 0 {
 		if !contains(tc.targetIssueCodes, issueCode) {
 			tc.targetIssueCodesMu.RUnlock()
-			return IssueMarketRegulation{}, false // ターゲット銘柄でなければエラー
+			return domain.IssueMarketRegulation{}, false // ターゲット銘柄でなければエラー
 		}
 	}
 	tc.targetIssueCodesMu.RUnlock()
 
 	marketMap, ok := tc.issueMarketRegulationMap[issueCode]
 	if !ok {
-		return IssueMarketRegulation{}, false
+		return domain.IssueMarketRegulation{}, false
 	}
 	issueMarket, ok := marketMap[marketCode]
 	return issueMarket, ok

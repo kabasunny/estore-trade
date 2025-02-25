@@ -1,4 +1,4 @@
-package tachibana
+package domain
 
 // SystemStatus システム状態 (必要最低限)
 type SystemStatus struct {

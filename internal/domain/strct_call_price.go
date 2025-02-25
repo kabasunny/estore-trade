@@ -1,4 +1,4 @@
-package tachibana
+package domain
 
 // CallPrice 呼値
 type CallPrice struct {

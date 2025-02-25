@@ -1,6 +1,7 @@
 package tachibana
 
 import (
+	"estore-trade/internal/domain"
 	"net/url"
 	"sync"
 	"time"
@@ -25,13 +26,14 @@ type TachibanaClientImple struct {
 	pNoMu      sync.Mutex   // pNo の排他制御用
 
 	// マスタデータ保持用 (必要最低限に絞り込み)
-	systemStatus             SystemStatus
-	dateInfo                 DateInfo
-	callPriceMap             map[string]CallPrice
-	issueMap                 map[string]IssueMaster
-	issueMarketMap           map[string]map[string]IssueMarketMaster
-	issueMarketRegulationMap map[string]map[string]IssueMarketRegulation
-	operationStatusKabuMap   map[string]map[string]OperationStatusKabu
+	systemStatus             domain.SystemStatus
+	dateInfo                 domain.DateInfo
+	callPriceMap             map[string]domain.CallPrice
+	issueMap                 map[string]domain.IssueMaster
+	issueMarketMap           map[string]map[string]domain.IssueMarketMaster
+	issueMarketRegulationMap map[string]map[string]domain.IssueMarketRegulation
+	operationStatusKabuMap   map[string]map[string]domain.OperationStatusKabu
 	targetIssueCodes         []string
 	targetIssueCodesMu       sync.RWMutex
+	masterData               *domain.MasterData
 }

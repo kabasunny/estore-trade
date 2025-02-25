@@ -1,4 +1,4 @@
-package tachibana
+package domain
 
 // IssueMarketMaster 株式銘柄市場マスタ
 type IssueMarketMaster struct {

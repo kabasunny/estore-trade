@@ -2,6 +2,7 @@ package tachibana
 
 import (
 	"estore-trade/internal/config"
+	"estore-trade/internal/domain"
 	"net/url"
 
 	"go.uber.org/zap"
@@ -21,11 +22,11 @@ func NewTachibanaClient(cfg *config.Config, logger *zap.Logger) TachibanaClient 
 		logger:                   logger,
 		loggined:                 false,
 		pNo:                      0,
-		callPriceMap:             make(map[string]CallPrice),
-		issueMap:                 make(map[string]IssueMaster),
-		issueMarketMap:           make(map[string]map[string]IssueMarketMaster),
-		issueMarketRegulationMap: make(map[string]map[string]IssueMarketRegulation),
-		operationStatusKabuMap:   make(map[string]map[string]OperationStatusKabu),
+		callPriceMap:             make(map[string]domain.CallPrice),
+		issueMap:                 make(map[string]domain.IssueMaster),
+		issueMarketMap:           make(map[string]map[string]domain.IssueMarketMaster),
+		issueMarketRegulationMap: make(map[string]map[string]domain.IssueMarketRegulation),
+		operationStatusKabuMap:   make(map[string]map[string]domain.OperationStatusKabu),
 		targetIssueCodes:         make([]string, 0),
 	}
 }

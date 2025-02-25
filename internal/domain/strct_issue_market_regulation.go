@@ -1,4 +1,4 @@
-package tachibana
+package domain
 
 // IssueMarketRegulation 株式銘柄別・市場別規制 (必要最低限)
 type IssueMarketRegulation struct {

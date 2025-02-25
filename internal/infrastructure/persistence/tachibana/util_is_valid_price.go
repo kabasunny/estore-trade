@@ -1,11 +1,12 @@
 package tachibana
 
 import (
+	"estore-trade/internal/domain"
 	"math"
 )
 
 // isValidPrice は、注文価格が呼値の単位に従っているかをチェックする関数
-func isValidPrice(price float64, callPrice CallPrice) bool {
+func isValidPrice(price float64, callPrice domain.CallPrice) bool {
 	prices := [20]float64{
 		callPrice.Price1, callPrice.Price2, callPrice.Price3, callPrice.Price4, callPrice.Price5,
 		callPrice.Price6, callPrice.Price7, callPrice.Price8, callPrice.Price9, callPrice.Price10,

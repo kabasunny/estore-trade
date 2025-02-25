@@ -6,6 +6,6 @@ import (
 	"estore-trade/internal/domain"
 )
 
-func NewSignalRepository(db *sql.DB) domain.SignalRepository { // SignalRepository インターフェースを返す
+func NewSignalRepository(db *sql.DB) domain.SignalRepository {
 	return &signalRepository{db: db}
 }

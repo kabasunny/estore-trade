@@ -1,4 +1,4 @@
-package tachibana
+package domain
 
 // OperationStatusKabu 運用ステータス（株）(必要最低限)
 type OperationStatusKabu struct {

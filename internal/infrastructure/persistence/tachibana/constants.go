@@ -16,4 +16,6 @@ const (
 	clmidLogin              = "CLMAuthLoginRequest"
 	clmidOrderListDetail    = "CLMOrderListDetail" //注文詳細
 	clmidCancelOrder        = "CLMKabuCancelOrder" //注文キャンセル
+
+	clmFdsGetMarketPrice = "CLMMfdsGetMarketPrice" //時価情報
 )

@@ -1,7 +1,9 @@
-// internal/domain/model.go
+// internal/domain/strct_account.go
 package domain
 
-import "time"
+import (
+	"time"
+)
 
 // Account 取引口座
 type Account struct {

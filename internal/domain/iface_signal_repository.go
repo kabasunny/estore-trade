@@ -8,5 +8,6 @@ import (
 // SignalRepository はシグナルデータの永続化を担当するインターフェース
 type SignalRepository interface {
 	SaveSignals(ctx context.Context, signals []Signal) error
-	// 必要に応じて、GetSignals, GetLatestSignals などのメソッドを追加
+	GetSignalsByIssueCode(ctx context.Context, issueCode string) ([]Signal, error) // 追加: 銘柄コードで検索
+	GetLatestSignals(ctx context.Context, limit int) ([]Signal, error)             // 追加: 最新のシグナルを取得
 }

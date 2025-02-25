@@ -1,4 +1,4 @@
-// internal/app/app.go
+// internal/app/strct_app.go
 package app
 
 import (
@@ -6,15 +6,14 @@ import (
 
 	"estore-trade/internal/autotrading/auto_usecase"
 	"estore-trade/internal/config"
-	"estore-trade/internal/domain"
+	"estore-trade/internal/domain" // 追加
 	"estore-trade/internal/infrastructure/database/postgres"
-	"estore-trade/internal/infrastructure/persistence/tachibana"
+	"estore-trade/internal/infrastructure/persistence/tachibana" // 追加
 	"estore-trade/internal/usecase"
 
 	"go.uber.org/zap"
 )
 
-// App 構造体は、アプリケーションの依存関係を保持
 type App struct {
 	Config             *config.Config
 	Logger             *zap.Logger
@@ -22,6 +21,7 @@ type App struct {
 	TachibanaClient    tachibana.TachibanaClient
 	OrderRepo          domain.OrderRepository
 	AccountRepo        domain.AccountRepository
+	MasterDataRepo     domain.MasterDataRepository // 追加
 	TradingUsecase     usecase.TradingUsecase
 	AutoTradingUsecase auto_usecase.AutoTradingUsecase
 	EventStream        *tachibana.EventStream

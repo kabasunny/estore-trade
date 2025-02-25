@@ -1,4 +1,4 @@
-// internal/infrastructure/persistence/signal/signal_repository.go
+// internal/infrastructure/persistence/signal/mthd_save_signals.go
 package signal
 
 import (
@@ -11,13 +11,13 @@ import (
 func (r *signalRepository) SaveSignals(ctx context.Context, signals []domain.Signal) error {
 	// 1. テーブルの存在を確認し、なければ作成 (マイグレーションツールを使う場合は不要)
 	createTableSQL := `
-        CREATE TABLE IF NOT EXISTS signals (
-            id SERIAL PRIMARY KEY,
-            issue_code VARCHAR(10) NOT NULL,
-            side VARCHAR(4) NOT NULL,
-            priority INTEGER NOT NULL,
-            created_at TIMESTAMP WITH TIME ZONE NOT NULL
-        );
+    CREATE TABLE IF NOT EXISTS signals (
+        id SERIAL PRIMARY KEY,
+        issue_code VARCHAR(10) NOT NULL,
+        side VARCHAR(4) NOT NULL,
+        priority INTEGER NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL
+    );
     `
 	_, err := r.db.ExecContext(ctx, createTableSQL)
 	if err != nil {
@@ -50,5 +50,3 @@ func (r *signalRepository) SaveSignals(ctx context.Context, signals []domain.Sig
 	}
 	return nil
 }
-
-// 必要に応じて、GetSignals, GetLatestSignals などのメソッドを実装

@@ -1,71 +1,55 @@
+// internal/infrastructure/persistence/tachibana/mthd_download_master_data.go
 package tachibana
 
 import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"estore-trade/internal/domain" // 追加
 	"fmt"
 	"net/http"
 	"time"
 )
 
 // DownloadMasterData はマスタデータをダウンロード
-func (tc *TachibanaClientImple) DownloadMasterData(ctx context.Context) error {
-	payload := map[string]string{ // 必要最低限のマスタデータを要求
+func (tc *TachibanaClientImple) DownloadMasterData(ctx context.Context) (*domain.MasterData, error) { // 戻り値の型を変更
+	payload := map[string]string{
 		"sCLMID":       clmidDownloadMasterData,
 		"sTargetCLMID": "CLMSystemStatus,CLMDateZyouhou,CLMYobine,CLMIssueMstKabu,CLMIssueSizyouMstKabu,CLMIssueSizyouKiseiKabu,CLMUnyouStatusKabu,CLMEventDownloadComplete",
 	}
 
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
-		return fmt.Errorf("ペイロードのJSONマーシャルに失敗: %w", err)
+		return nil, fmt.Errorf("ペイロードのJSONマーシャルに失敗: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, tc.masterURL, bytes.NewBuffer(payloadJSON)) // マスターデータのリクエスト作成
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, tc.masterURL, bytes.NewBuffer(payloadJSON))
 	if err != nil {
-		return fmt.Errorf("マスターデータのリクエスト作成に失敗: %w", err)
+		return nil, fmt.Errorf("マスターデータのリクエスト作成に失敗: %w", err)
 	}
-	req.Header.Set("Content-Type", "application/json") // HTTPリクエストヘッダーに "Content-Type" を設定し、ボディの内容が JSON フォーマットであることをサーバーに通知
+	req.Header.Set("Content-Type", "application/json")
 
-	req, cancel := withContextAndTimeout(req, 600*time.Second) // 長めのタイムアウト付きでリクエストを送信
+	req, cancel := withContextAndTimeout(req, 600*time.Second)
 	defer cancel()
 
-	response, err := sendRequest(req, 3) // 3回リトライ設定し送信
+	response, err := sendRequest(req, 3)
 	if err != nil {
-		return fmt.Errorf("マスターデータのダウンロードに失敗: %w", err)
+		return nil, fmt.Errorf("マスターデータのダウンロードに失敗: %w", err)
 	}
 
-	// 不要なロックを削除
-	m := &masterDataManager{ // マスタデータマネージャーの初期化 mapは初期化しておかないとパニックになる
-		callPriceMap:             make(map[string]CallPrice),
-		issueMap:                 make(map[string]IssueMaster),
-		issueMarketMap:           make(map[string]map[string]IssueMarketMaster),
-		issueMarketRegulationMap: make(map[string]map[string]IssueMarketRegulation),
-		operationStatusKabuMap:   make(map[string]map[string]OperationStatusKabu),
+	// MasterData インスタンスの作成
+	m := &domain.MasterData{ //型を変更
+		CallPriceMap:             make(map[string]domain.CallPrice),
+		IssueMap:                 make(map[string]domain.IssueMaster),
+		IssueMarketMap:           make(map[string]map[string]domain.IssueMarketMaster),
+		IssueMarketRegulationMap: make(map[string]map[string]domain.IssueMarketRegulation),
+		OperationStatusKabuMap:   make(map[string]map[string]domain.OperationStatusKabu),
 	}
 
-	if err := processResponse(response, m, tc); err != nil { // レスポンスデータの処理
-		return err
+	if err := processResponse(response, m, tc); err != nil { //引数の型を変更
+		return nil, err
 	}
 
-	// マスタデータの更新
-	tc.systemStatus = m.systemStatus
-	tc.dateInfo = m.dateInfo
-	tc.issueMap = m.issueMap
-	tc.callPriceMap = m.callPriceMap
-	tc.issueMarketMap = m.issueMarketMap
-	tc.issueMarketRegulationMap = m.issueMarketRegulationMap
-	tc.operationStatusKabuMap = m.operationStatusKabuMap
-
-	// ターゲット銘柄の設定　指定された銘柄コードのみを対象とするようにマスタデータをフィルタリングする
-	if len(tc.targetIssueCodes) > 0 {
-		// 現状　tc.targetIssueCodesの挿入が実装されていない
-		if err := tc.SetTargetIssues(ctx, tc.targetIssueCodes); err != nil {
-			return err
-		}
-	} else {
-		fmt.Println("ターゲット銘柄が存在しません")
-	}
-
-	return nil
+	tc.masterData = m // MasterData をセット
+	return m, nil     // MasterDataを返す
 }

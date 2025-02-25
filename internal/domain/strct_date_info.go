@@ -1,5 +1,4 @@
-// internal/infrastructure/persistence/tachibana/strct_date_info.go
-package tachibana
+package domain
 
 // DateInfo 日付情報 (必要最低限)
 type DateInfo struct {

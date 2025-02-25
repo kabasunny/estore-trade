@@ -1,7 +1,9 @@
 package tachibana
 
+import "estore-trade/internal/domain"
+
 // GetIssueMarketMaster は銘柄コードと市場コードに対応する市場情報を返します。
-func (tc *TachibanaClientImple) GetIssueMarketMaster(issueCode, marketCode string) (IssueMarketMaster, bool) {
+func (tc *TachibanaClientImple) GetIssueMarketMaster(issueCode, marketCode string) (domain.IssueMarketMaster, bool) {
 	tc.mu.RLock()
 	defer tc.mu.RUnlock()
 
@@ -10,14 +12,14 @@ func (tc *TachibanaClientImple) GetIssueMarketMaster(issueCode, marketCode strin
 	if len(tc.targetIssueCodes) > 0 {
 		if !contains(tc.targetIssueCodes, issueCode) {
 			tc.targetIssueCodesMu.RUnlock()
-			return IssueMarketMaster{}, false // ターゲット銘柄でなければエラー
+			return domain.IssueMarketMaster{}, false // ターゲット銘柄でなければエラー
 		}
 	}
 	tc.targetIssueCodesMu.RUnlock()
 
 	marketMap, ok := tc.issueMarketMap[issueCode]
 	if !ok {
-		return IssueMarketMaster{}, false
+		return domain.IssueMarketMaster{}, false
 	}
 	issueMarket, ok := marketMap[marketCode]
 	return issueMarket, ok
