@@ -7,6 +7,8 @@ import (
 )
 
 // TachibanaClient インターフェース (メソッドのシグネチャを定義)
+// 基本的には、値渡しを優先し、明確な理由がある場合にのみポインタ渡しを選択するという方針が良い
+// 今回のケースでは、SystemStatus と IssueMaster は値渡し、Order はポインタ渡し、MasterData は (現状ではどちらでも良いが) ポインタ渡しとしておくのが、現時点での最適解と考えられる
 type TachibanaClient interface {
 	Login(ctx context.Context, cfg interface{}) error                                           // ログイン
 	PlaceOrder(ctx context.Context, order *domain.Order) (*domain.Order, error)                 // 注文

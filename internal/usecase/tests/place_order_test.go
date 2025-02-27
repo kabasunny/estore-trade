@@ -36,18 +36,16 @@ func TestTradingUsecase_PlaceOrder(t *testing.T) {
 	t.Run("valid order", func(t *testing.T) {
 		// モッククライアントとモックリポジトリのセットアップ
 		mockClient := new(tachibana.MockTachibanaClient)
-		// usecase. を追加
 		mockOrderRepo := new(usecase.MockOrderRepository)
 		//mockAccountRepo := new(MockAccountRepository) // 今回は使用しない
 		// 期待されるメソッド呼び出しと戻り値を設定
-		mockClient.On("GetSystemStatus").Return(domain.SystemStatus{SystemState: "1"}) // システム稼働中
-		mockClient.On("GetIssueMaster", "7203").Return(domain.IssueMaster{TradingUnit: 1}, true)
-		mockClient.On("CheckPriceIsValid", "7203", 0.0, false).Return(true, nil) // 成行注文なので価格はチェックしない
+		mockClient.On("GetSystemStatus").Return(domain.SystemStatus{SystemState: "1"})             // システム稼働中
+		mockClient.On("GetIssueMaster", "7203").Return(domain.IssueMaster{TradingUnit: 100}, true) // IssueMaster に戻す
+		mockClient.On("CheckPriceIsValid", "7203", 0.0, false).Return(true, nil)                   // 成行注文なので価格はチェックしない
 		mockClient.On("PlaceOrder", mock.Anything, order).Return(&domain.Order{ID: "order-id", Status: "pending"}, nil)
 		mockOrderRepo.On("CreateOrder", mock.Anything, mock.AnythingOfType("*domain.Order")).Return(nil)
 
 		// テスト対象のユースケースを作成
-		// usecase. を追加
 		uc := usecase.NewTradingUsecase(mockClient, testLogger, mockOrderRepo, nil, cfg)
 
 		// PlaceOrder メソッドを呼び出す
@@ -89,7 +87,7 @@ func TestTradingUsecase_PlaceOrder(t *testing.T) {
 		// テスト対象のユースケースを作成
 		uc := usecase.NewTradingUsecase(mockClient, testLogger, mockOrderRepo, nil, cfg)
 		mockClient.On("GetSystemStatus").Return(domain.SystemStatus{SystemState: "1"})
-		mockClient.On("GetIssueMaster", "invalid").Return(domain.IssueMaster{}, false) // 無効な銘柄コード
+		mockClient.On("GetIssueMaster", "invalid").Return(domain.IssueMaster{}, false) // 無効な銘柄コード, IssueMaster に戻す
 
 		placedOrder, err := uc.PlaceOrder(context.Background(), &domain.Order{Symbol: "invalid", Side: "buy", OrderType: "market", Quantity: 100})
 		assert.Error(t, err)
@@ -107,7 +105,7 @@ func TestTradingUsecase_PlaceOrder(t *testing.T) {
 		// テスト対象のユースケースを作成
 		uc := usecase.NewTradingUsecase(mockClient, testLogger, mockOrderRepo, nil, cfg)
 		mockClient.On("GetSystemStatus").Return(domain.SystemStatus{SystemState: "1"})
-		mockClient.On("GetIssueMaster", "7203").Return(domain.IssueMaster{TradingUnit: 2}, true) // 売買単位が2
+		mockClient.On("GetIssueMaster", "7203").Return(domain.IssueMaster{TradingUnit: 2}, true) // 売買単位が2, IssueMaster に戻す
 
 		placedOrder, err := uc.PlaceOrder(context.Background(), &domain.Order{Symbol: "7203", Side: "buy", OrderType: "market", Quantity: 1}) // 数量が1
 		assert.Error(t, err)
@@ -125,10 +123,10 @@ func TestTradingUsecase_PlaceOrder(t *testing.T) {
 		uc := usecase.NewTradingUsecase(mockClient, testLogger, mockOrderRepo, nil, &config.Config{})
 
 		mockClient.On("GetSystemStatus").Return(domain.SystemStatus{SystemState: "1"})
-		mockClient.On("GetIssueMaster", "7203").Return(domain.IssueMaster{TradingUnit: 1}, true)
-		mockClient.On("CheckPriceIsValid", "7203", 1000.0, false).Return(false, nil) // 無効な価格
+		mockClient.On("GetIssueMaster", "7203").Return(domain.IssueMaster{TradingUnit: 100}, true) //IssueMaster に戻す
+		mockClient.On("CheckPriceIsValid", "7203", 1000.0, false).Return(false, nil)               // 無効な価格
 
-		placedOrder, err := uc.PlaceOrder(context.Background(), &domain.Order{Symbol: "7203", Side: "buy", OrderType: "limit", Quantity: 1, Price: 1000})
+		placedOrder, err := uc.PlaceOrder(context.Background(), &domain.Order{Symbol: "7203", Side: "buy", OrderType: "limit", Quantity: 100, Price: 1000})
 		assert.Error(t, err)
 		assert.Nil(t, placedOrder)
 		assert.EqualError(t, err, "invalid order price: 1000.000000")
@@ -144,10 +142,10 @@ func TestTradingUsecase_PlaceOrder(t *testing.T) {
 		testLogger := zaptest.NewLogger(t)
 		uc := usecase.NewTradingUsecase(mockClient, testLogger, mockOrderRepo, nil, &config.Config{})
 		mockClient.On("GetSystemStatus").Return(domain.SystemStatus{SystemState: "1"})
-		mockClient.On("GetIssueMaster", "7203").Return(domain.IssueMaster{TradingUnit: 1}, true)
+		mockClient.On("GetIssueMaster", "7203").Return(domain.IssueMaster{TradingUnit: 100}, true) //IssueMaster に戻す
 		mockClient.On("CheckPriceIsValid", "7203", 1000.0, false).Return(false, errors.New("price check error"))
 
-		placedOrder, err := uc.PlaceOrder(context.Background(), &domain.Order{Symbol: "7203", Side: "buy", OrderType: "limit", Quantity: 1, Price: 1000})
+		placedOrder, err := uc.PlaceOrder(context.Background(), &domain.Order{Symbol: "7203", Side: "buy", OrderType: "limit", Quantity: 100, Price: 1000})
 		assert.Error(t, err)
 		assert.Nil(t, placedOrder)
 		assert.EqualError(t, err, "error checking price validity: price check error")
@@ -163,7 +161,7 @@ func TestTradingUsecase_PlaceOrder(t *testing.T) {
 		testLogger := zaptest.NewLogger(t)
 		uc := usecase.NewTradingUsecase(mockClient, testLogger, mockOrderRepo, nil, &config.Config{})
 		mockClient.On("GetSystemStatus").Return(domain.SystemStatus{SystemState: "1"})
-		mockClient.On("GetIssueMaster", "7203").Return(domain.IssueMaster{TradingUnit: 1}, true)
+		mockClient.On("GetIssueMaster", "7203").Return(domain.IssueMaster{TradingUnit: 100}, true) //IssueMaster に戻す
 		mockClient.On("CheckPriceIsValid", "7203", 0.0, false).Return(true, nil)
 		mockClient.On("PlaceOrder", mock.Anything, order).Return(nil, errors.New("tachibana API error")) // PlaceOrder でエラー
 
@@ -172,5 +170,27 @@ func TestTradingUsecase_PlaceOrder(t *testing.T) {
 		assert.Nil(t, placedOrder)
 		assert.EqualError(t, err, "tachibana API error")
 		mockClient.AssertExpectations(t)
+	})
+	// 異常系: CreateOrder (DB) がエラーを返すケース  (DBエラーはエラーにしない)
+	t.Run("CreateOrder error", func(t *testing.T) {
+		mockClient := new(tachibana.MockTachibanaClient)
+		mockOrderRepo := new(usecase.MockOrderRepository)
+		testLogger := zaptest.NewLogger(t)
+		uc := usecase.NewTradingUsecase(mockClient, testLogger, mockOrderRepo, nil, &config.Config{})
+
+		// 正常な注文が返ってくることを想定
+		expectedOrder := &domain.Order{ID: "order-id", Status: "pending"}
+
+		mockClient.On("GetSystemStatus").Return(domain.SystemStatus{SystemState: "1"})
+		mockClient.On("GetIssueMaster", "7203").Return(domain.IssueMaster{TradingUnit: 100}, true) //IssueMaster に戻す
+		mockClient.On("CheckPriceIsValid", "7203", 0.0, false).Return(true, nil)
+		mockClient.On("PlaceOrder", mock.Anything, order).Return(expectedOrder, nil)                                        // PlaceOrder は成功
+		mockOrderRepo.On("CreateOrder", mock.Anything, mock.AnythingOfType("*domain.Order")).Return(errors.New("DB error")) // CreateOrder でエラー
+
+		placedOrder, err := uc.PlaceOrder(context.Background(), order)
+		assert.NoError(t, err)                      // エラーは発生しない
+		assert.Equal(t, expectedOrder, placedOrder) // PlaceOrderの結果が返る
+		mockClient.AssertExpectations(t)
+		mockOrderRepo.AssertExpectations(t)
 	})
 }
