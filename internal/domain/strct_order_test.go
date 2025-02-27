@@ -7,12 +7,14 @@ import (
 )
 
 func TestOrder_Validate(t *testing.T) {
+	// テストケースの定義
 	tests := []struct {
-		name    string
-		order   Order
-		wantErr bool
+		name    string // テストケースの名前
+		order   Order  // テストする注文の構造体
+		wantErr bool   // エラーが発生することを期待するか
 	}{
 		{
+			// 有効な注文のテストケース
 			name: "valid order",
 			order: Order{
 				ID:               "test-order-id",
@@ -28,6 +30,7 @@ func TestOrder_Validate(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			// 無効な注文のテストケース - IDが空
 			name: "invalid order - empty ID",
 			order: Order{
 				Symbol:           "7203",
@@ -42,6 +45,7 @@ func TestOrder_Validate(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			// 無効な注文のテストケース - Symbolが空
 			name: "invalid order - empty Symbol",
 			order: Order{
 				ID:               "test-order-id",
@@ -56,6 +60,7 @@ func TestOrder_Validate(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			// 無効な注文のテストケース - 無効なSide
 			name: "invalid order - invalid Side",
 			order: Order{
 				ID:               "test-order-id",
@@ -71,6 +76,7 @@ func TestOrder_Validate(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			// 無効な注文のテストケース - 無効なOrderType
 			name: "invalid order - invalid OrderType",
 			order: Order{
 				ID:               "test-order-id",
@@ -86,6 +92,7 @@ func TestOrder_Validate(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			// 無効な注文のテストケース - Quantityが無効
 			name: "invalid order - invalid Quantity",
 			order: Order{
 				ID:               "test-order-id",
@@ -101,6 +108,7 @@ func TestOrder_Validate(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			// 無効な注文のテストケース - 指値注文で価格が0
 			name: "invalid order - limit order, price is zero",
 			order: Order{
 				ID:               "test-order-id",
@@ -117,6 +125,7 @@ func TestOrder_Validate(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			// 無効な注文のテストケース - 逆指値注文でトリガー価格が0
 			name: "invalid order - stop order, TriggerPrice is zero",
 			order: Order{
 				ID:               "test-order-id",
@@ -136,9 +145,12 @@ func TestOrder_Validate(t *testing.T) {
 		// 他のテストケース (OrderType, Price, Quantity, Status など)
 	}
 
+	// 各テストケースをループで実行
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// 注文の検証を実行
 			err := tt.order.Validate()
+			// エラーの結果が期待値と一致するかを確認
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Order.Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
