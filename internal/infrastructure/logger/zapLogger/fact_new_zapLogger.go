@@ -1,58 +1,50 @@
+// internal/infrastructure/logger/zapLogger/fact_new_zapLogger.go
 package zapLogger
 
 import (
 	"estore-trade/internal/config"
+	"fmt"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
 
-// 各コンポーネント（PostgresDB, TachibanaClientIntImple, TradingHandler, tradingUsecase）が具体的なロガー実装（zap）に直接依存しないように
-// ロギング機能を抽象化し、後で別のロガー（例えば logrus）に切り替えたり、テスト時にモックのロガーを注入したりすることを容易にする
-// main.go はアプリケーションのエントリーポイントであり、具体的なロガー実装（zap）を直接使用しても、他のコンポーネントへの影響は少ないため、簡潔さを優先
-
 // NewZapLogger は設定に基づいて新しいzap.Loggerインスタンスを初期化
 func NewZapLogger(cfg *config.Config) (*zap.Logger, error) {
 	var zapCfg zap.Config
 
+	// levelFromString を switch の外で呼び出す
+	level, err := levelFromString(cfg.LogLevel)
+	if err != nil {
+		return nil, fmt.Errorf("invalid log level: %w", err)
+	}
+
 	// ログレベルに基づいて設定を調整
 	switch cfg.LogLevel {
 	case "debug":
-		zapCfg = zap.NewDevelopmentConfig() // 開発環境用のデフォルト設定
-	case "info":
-		zapCfg = zap.NewProductionConfig()                     // 本番環境用のデフォルト設定
-		zapCfg.Level = zap.NewAtomicLevelAt(zapcore.InfoLevel) // ログレベルを情報レベルに設定
-	case "warn":
+		zapCfg = zap.NewDevelopmentConfig()
+		zapCfg.Level = zap.NewAtomicLevelAt(level)
+	case "info", "warn", "error", "dpanic", "panic", "fatal": //本番環境で適切なもの
 		zapCfg = zap.NewProductionConfig()
-		zapCfg.Level = zap.NewAtomicLevelAt(zapcore.WarnLevel) // ログレベルを警告レベルに設定
-	case "error":
-		zapCfg = zap.NewProductionConfig()
-
-		zapCfg.Level = zap.NewAtomicLevelAt(zapcore.ErrorLevel) // ログレベルをエラーレベルに設定
-	case "dpanic":
-		zapCfg = zap.NewProductionConfig()
-		zapCfg.Level = zap.NewAtomicLevelAt(zapcore.DPanicLevel) // ログレベルを致命的エラーレベル（DPanic）に設定
-	case "panic":
-		zapCfg = zap.NewProductionConfig()
-		zapCfg.Level = zap.NewAtomicLevelAt(zapcore.PanicLevel) // ログレベルをパニックレベルに設定
-	case "fatal":
-		zapCfg = zap.NewProductionConfig()
-		zapCfg.Level = zap.NewAtomicLevelAt(zapcore.FatalLevel) // ログレベルを致命的エラーレベルに設定
-	default:
-		zapCfg = zap.NewProductionConfig() // デフォルトでは本番環境用のデフォルト設定
+		zapCfg.Level = zap.NewAtomicLevelAt(level) // ログレベルを設定
+	default: // もしLogLevelが空か、上記以外だったら
+		// default case は不要になる
+		// 有効なログレベルが設定されている場合は、ここには到達しない
+		// 無効なログレベルの場合は、levelFromString でエラーが返される
 	}
 
-	zapCfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder // ISO8601フォーマット
-	zapCfg.OutputPaths = []string{"stdout"}                      // 標準出力
-	zapCfg.ErrorOutputPaths = []string{"stderr"}                 // 標準エラー出力
+	// ... (その他の設定は変更なし) ...
+	//エンコーディングをJSONに
+	zapCfg.Encoding = "json"
+	// タイムスタンプのフォーマットを ISO8601 に設定
+	zapCfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+	//標準出力と標準エラー出力
+	zapCfg.OutputPaths = []string{"stdout"}
+	zapCfg.ErrorOutputPaths = []string{"stderr"}
 
-	return zapCfg.Build() //設定された全ての構成オプションを適用して、新しいロガーインスタンスを生成
+	logger, err := zapCfg.Build()
+	if err != nil {
+		return nil, fmt.Errorf("failed to build zap logger: %w", err)
+	}
+	return logger, nil
 }
-
-// zap.Logger の主なメソッドの一部：
-// Info(msg string, fields ...zap.Field)：情報レベルのログメッセージを出力
-// Error(msg string, fields ...zap.Field)：エラーレベルのログメッセージを出力
-// Debug(msg string, fields ...zap.Field)：デバッグレベルのログメッセージを出力
-// Warn(msg string, fields ...zap.Field)：警告レベルのログメッセージを出力
-// Fatal(msg string, fields ...zap.Field)：致命的エラーレベルのログメッセージを出力し、プログラムを終了
-// Sync() error：バッファリングされたログエントリを出力先にフラッシュ
