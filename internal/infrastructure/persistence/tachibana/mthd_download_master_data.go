@@ -5,16 +5,18 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"estore-trade/internal/domain" // 追加
+	"estore-trade/internal/domain"
 	"fmt"
 	"net/http"
 	"time"
 )
 
-// DownloadMasterData はマスタデータをダウンロード
-func (tc *TachibanaClientImple) DownloadMasterData(ctx context.Context) (*domain.MasterData, error) { // 戻り値の型を変更
+// DownloadMasterData はマスタデータをダウンロードし、TachibanaClientImpleの
+// 各mapに格納
+func (tc *TachibanaClientImple) DownloadMasterData(ctx context.Context) (*domain.MasterData, error) {
 	payload := map[string]string{
-		"sCLMID":       clmidDownloadMasterData,
+		"sCLMID": clmidDownloadMasterData,
+		// 今回はすべて取得
 		"sTargetCLMID": "CLMSystemStatus,CLMDateZyouhou,CLMYobine,CLMIssueMstKabu,CLMIssueSizyouMstKabu,CLMIssueSizyouKiseiKabu,CLMUnyouStatusKabu,CLMEventDownloadComplete",
 	}
 
@@ -29,16 +31,16 @@ func (tc *TachibanaClientImple) DownloadMasterData(ctx context.Context) (*domain
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	req, cancel := withContextAndTimeout(req, 600*time.Second)
+	req, cancel := withContextAndTimeout(req, 600*time.Second) // 10分
 	defer cancel()
 
-	response, err := sendRequest(req, 3)
+	response, err := sendRequest(req, 3) // リトライ
 	if err != nil {
 		return nil, fmt.Errorf("マスターデータのダウンロードに失敗: %w", err)
 	}
 
-	// MasterData インスタンスの作成
-	m := &domain.MasterData{ //型を変更
+	// domain.MasterData インスタンスの作成
+	m := &domain.MasterData{
 		CallPriceMap:             make(map[string]domain.CallPrice),
 		IssueMap:                 make(map[string]domain.IssueMaster),
 		IssueMarketMap:           make(map[string]map[string]domain.IssueMarketMaster),
@@ -46,10 +48,15 @@ func (tc *TachibanaClientImple) DownloadMasterData(ctx context.Context) (*domain
 		OperationStatusKabuMap:   make(map[string]map[string]domain.OperationStatusKabu),
 	}
 
-	if err := processResponse(response, m, tc); err != nil { //引数の型を変更
+	// レスポンスの処理
+	// responseはmap[string]interface{}型
+	// 各マスタデータは、sCLMIDをキーとして格納されている
+	if err := processResponse(response, m, tc); err != nil {
 		return nil, err
 	}
 
-	tc.masterData = m // MasterData をセット
-	return m, nil     // MasterDataを返す
+	// ダウンロードしたデータをTachibanaClientImpleにセット
+	tc.MasterData = m
+
+	return m, nil // 成功
 }

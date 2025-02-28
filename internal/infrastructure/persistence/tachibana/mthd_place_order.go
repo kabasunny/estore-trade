@@ -1,35 +1,28 @@
+// internal/infrastructure/persistence/tachibana/mthd_place_order.go
 package tachibana
 
 import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"estore-trade/internal/domain"
+	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
 	"time"
+
+	"estore-trade/internal/domain"
 
 	"go.uber.org/zap"
 )
 
 // PlaceOrder は API に対して新しい株式注文を行う
 func (tc *TachibanaClientImple) PlaceOrder(ctx context.Context, order *domain.Order) (*domain.Order, error) {
-	payload := map[string]interface{}{
-		"sCLMID":              clmidPlaceOrder,
-		"sZyoutoekiKazeiC":    zyoutoekiKazeiCTokutei,
-		"sIssueCode":          order.Symbol,
-		"sSizyouC":            sizyouCToushou,
-		"sBaibaiKubun":        map[string]string{"buy": baibaiKubunBuy, "sell": baibaiKubunSell}[order.Side],
-		"sCondition":          conditionSashine,
-		"sOrderPrice":         strconv.FormatFloat(order.Price, 'f', -1, 64),
-		"sOrderSuryou":        strconv.Itoa(order.Quantity),
-		"sGenkinShinyouKubun": genkinShinyouKubunGenbutsu,
-		"sOrderExpireDay":     orderExpireDay,
-		"sSecondPassword":     tc.Secret,
-		"p_no":                tc.getPNo(),
-		"p_sd_date":           formatSDDate(time.Now()),
+
+	payload, err := ConvertOrderToPlaceOrderPayload(order, tc) // 変換関数を呼び出す
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert order to payload: %w", err)
 	}
+
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal payload: %w", err)
@@ -47,6 +40,8 @@ func (tc *TachibanaClientImple) PlaceOrder(ctx context.Context, order *domain.Or
 		return nil, fmt.Errorf("place order failed: %w", err)
 	}
 
+	// internal/infrastructure/persistence/tachibana/mthd_place_order.go
+
 	if resultCode, ok := response["sResultCode"].(string); ok && resultCode != "0" {
 		warnCode, _ := response["sWarningCode"].(string)
 		warnText, _ := response["sWarningText"].(string)
@@ -54,8 +49,16 @@ func (tc *TachibanaClientImple) PlaceOrder(ctx context.Context, order *domain.Or
 		return nil, fmt.Errorf("order API returned an error: %s - %s", resultCode, response["sResultText"])
 	}
 
-	order.ID = response["sOrderNumber"].(string)
-	order.Status = "pending"
+	//order.ID = response["sOrderNumber"].(string) //エラー箇所
+	// order.Status = "pending" //初期状態ではpending
+
+	//追加
+	orderID, ok := response["sOrderNumber"].(string)
+	if !ok {
+		return nil, errors.New("order number not found in response")
+	}
+	order.ID = orderID
+	order.Status = "pending" //初期状態ではpending
 
 	return order, nil
 }

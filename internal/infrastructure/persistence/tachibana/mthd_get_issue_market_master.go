@@ -1,3 +1,4 @@
+// internal/infrastructure/persistence/tachibana/mthd_get_issue_market_master.go
 package tachibana
 
 import "estore-trade/internal/domain"
@@ -8,16 +9,15 @@ func (tc *TachibanaClientImple) GetIssueMarketMaster(issueCode, marketCode strin
 	defer tc.Mu.RUnlock()
 
 	// ターゲット銘柄リストが設定されている場合は、チェックを行う
-	tc.targetIssueCodesMu.RLock()
-	if len(tc.targetIssueCodes) > 0 {
-		if !contains(tc.targetIssueCodes, issueCode) {
-			tc.targetIssueCodesMu.RUnlock()
-			return domain.IssueMarketMaster{}, false // ターゲット銘柄でなければエラー
-		}
+	tc.TargetIssueCodesMu.RLock()
+	// ターゲット銘柄リストが空でない、かつ、指定された銘柄コードが含まれていない場合のみ false を返す
+	if len(tc.TargetIssueCodes) > 0 && !contains(tc.TargetIssueCodes, issueCode) {
+		tc.TargetIssueCodesMu.RUnlock()
+		return domain.IssueMarketMaster{}, false // ターゲット銘柄でなければエラー
 	}
-	tc.targetIssueCodesMu.RUnlock()
+	tc.TargetIssueCodesMu.RUnlock()
 
-	marketMap, ok := tc.issueMarketMap[issueCode]
+	marketMap, ok := tc.IssueMarketMap[issueCode]
 	if !ok {
 		return domain.IssueMarketMaster{}, false
 	}

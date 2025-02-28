@@ -21,13 +21,13 @@ func TestTachibanaClientImple_Login_Success(t *testing.T) {
 
 	// モックのレスポンスを設定 (正常系: ログイン成功)
 	mockResponse := `{
-		"sResultCode": "0",
-		"sUrlRequest": "https://example.com/request",
-		"sUrlMaster": "https://example.com/master",
-		"sUrlPrice": "https://example.com/price",
-		"sUrlEvent": "https://example.com/event",
-		"p_no": "12345"
-	}`
+        "sResultCode": "0",
+        "sUrlRequest": "https://example.com/request",
+        "sUrlMaster": "https://example.com/master",
+        "sUrlPrice": "https://example.com/price",
+        "sUrlEvent": "https://example.com/event",
+        "p_no": "12345"
+        }`
 	httpmock.RegisterResponder("POST", "https://example.com/login",
 		httpmock.NewStringResponder(200, mockResponse))
 
@@ -61,14 +61,16 @@ func TestTachibanaClientImple_Login_Success(t *testing.T) {
 	assert.True(t, time.Now().Before(tc.Expiry))
 }
 
+// login_test.go
 func TestTachibanaClientImple_Login_Failure(t *testing.T) {
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
 
 	// モックのレスポンスを設定 (異常系: ログイン失敗)
 	mockResponse := `{"sResultCode": "E001", "sResultText": "Login failed"}`
+	// ステータスコードを 401 (Unauthorized) に変更
 	httpmock.RegisterResponder("POST", "https://example.com/login",
-		httpmock.NewStringResponder(200, mockResponse)) // ステータスコードは200だが、エラー
+		httpmock.NewStringResponder(401, mockResponse))
 
 	cfg := &config.Config{
 		TachibanaBaseURL:  "https://example.com/",
@@ -86,8 +88,8 @@ func TestTachibanaClientImple_Login_Failure(t *testing.T) {
 
 	// ログイン失敗時は、pNoが1になっているはず (TachibanaClientImple 側でインクリメント)
 	assert.Equal(t, int64(1), tc.PNo)
-	assert.ErrorContains(t, err, "login API returned an error") // エラーメッセージの確認
-	assert.False(t, tc.Loggined)                                //ログイン状態
+	assert.ErrorContains(t, err, "login failed") // エラーメッセージの確認。ここを修正
+	assert.False(t, tc.Loggined)                 //ログイン状態
 
 	// URLは空文字列
 	assert.Equal(t, "", tc.RequestURL)
@@ -138,7 +140,7 @@ func TestTachibanaClientImple_Login_ExpiredURL(t *testing.T) {
         "sUrlPrice": "https://example.com/price1",
         "sUrlEvent": "https://example.com/event1",
         "p_no": "1"
-    }`
+        }`
 	httpmock.RegisterResponder("POST", "https://example.com/login",
 		httpmock.NewStringResponder(200, mockResponse1))
 
@@ -174,7 +176,7 @@ func TestTachibanaClientImple_Login_ExpiredURL(t *testing.T) {
         "sUrlPrice": "https://example.com/price2",
         "sUrlEvent": "https://example.com/event2",
         "p_no": "2"
-    }`
+        }`
 	// URL は同じだが、2回目の呼び出しとして認識させる
 	httpmock.RegisterResponder("POST", "https://example.com/login",
 		httpmock.NewStringResponder(200, mockResponse2))

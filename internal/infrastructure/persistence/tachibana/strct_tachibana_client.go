@@ -26,14 +26,14 @@ type TachibanaClientImple struct {
 	PNoMu      sync.Mutex   // pNo の排他制御用
 
 	// マスタデータ保持用 (必要最低限に絞り込み)
-	systemStatus             domain.SystemStatus
-	dateInfo                 domain.DateInfo
-	callPriceMap             map[string]domain.CallPrice
-	issueMap                 map[string]domain.IssueMaster
-	issueMarketMap           map[string]map[string]domain.IssueMarketMaster
-	issueMarketRegulationMap map[string]map[string]domain.IssueMarketRegulation
-	operationStatusKabuMap   map[string]map[string]domain.OperationStatusKabu
-	targetIssueCodes         []string
-	targetIssueCodesMu       sync.RWMutex
-	masterData               *domain.MasterData
+	SystemStatus             domain.SystemStatus
+	DateInfo                 domain.DateInfo
+	CallPriceMap             map[string]domain.CallPrice
+	IssueMap                 map[string]domain.IssueMaster
+	IssueMarketMap           map[string]map[string]domain.IssueMarketMaster
+	IssueMarketRegulationMap map[string]map[string]domain.IssueMarketRegulation
+	OperationStatusKabuMap   map[string]map[string]domain.OperationStatusKabu
+	TargetIssueCodes         []string
+	TargetIssueCodesMu       sync.RWMutex
+	MasterData               *domain.MasterData
 }

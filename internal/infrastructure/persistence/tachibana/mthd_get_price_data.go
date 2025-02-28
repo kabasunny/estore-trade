@@ -5,7 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"estore-trade/internal/domain" //追加
+	"estore-trade/internal/domain"
 	"fmt"
 	"net/http"
 	"strings"
@@ -15,8 +15,8 @@ import (
 )
 
 // GetPriceData は、指定された銘柄コードのリストに対して、時価情報（当日終値、出来高など）を取得します。
-func (tc *TachibanaClientImple) GetPriceData(ctx context.Context, issueCodes []string) ([]domain.PriceData, error) { // 戻り値の型を変更
-	priceURL, err := tc.GetPriceURL()
+func (tc *TachibanaClientImple) GetPriceData(ctx context.Context, issueCodes []string) ([]domain.PriceData, error) {
+	priceURL, err := tc.GetPriceURL() // キャッシュされたPriceURLを取得
 	if err != nil {
 		return nil, fmt.Errorf("failed to get price URL: %w", err)
 	}
@@ -54,21 +54,17 @@ func (tc *TachibanaClientImple) GetPriceData(ctx context.Context, issueCodes []s
 	}
 
 	// レスポンスデータの処理 (ここでは必要なフィールドのみ抽出)
-	var priceDataList []domain.PriceData // 変更
+	var priceDataList []domain.PriceData
 	// APIレスポンスの構造に合わせて修正
-	if data, ok := response["data"].([]interface{}); ok {
+	if data, ok := response["data"].([]interface{}); ok { //"data"に配列
 		for _, item := range data {
 			if itemMap, ok := item.(map[string]interface{}); ok {
-				var priceData domain.PriceData // 変更
+				var priceData domain.PriceData
 				if err := mapToStruct(itemMap, &priceData); err != nil {
 					return nil, fmt.Errorf("failed to map PriceData: %w", err)
 				}
-				// sIssueCode がレスポンスにない場合は、リクエスト時の issueCodes から設定
-				for _, code := range issueCodes {
-					if strings.Contains(issueCodeStr, code) { //リクエストした銘柄コードと一致したら
-						priceData.IssueCode = code
-					}
-				}
+				// sIssueCode がレスポンスにない場合は、リクエスト時の issueCodes から設定(今回はある前提)
+
 				priceDataList = append(priceDataList, priceData)
 			}
 		}

@@ -2,81 +2,106 @@
 package tachibana
 
 import (
-	"estore-trade/internal/domain" //追加
+	"estore-trade/internal/domain"
 	"fmt"
 	"strconv"
 
 	"go.uber.org/zap"
 )
 
-func processResponse(response map[string]interface{}, m *domain.MasterData, tc *TachibanaClientImple) error { //m *masterDataManagerを*domain.MasterData
-	// レスポンスからsCLMIDを取り出す
+func processResponse(response map[string]interface{}, m *domain.MasterData, tc *TachibanaClientImple) error {
 	for sCLMID, data := range response {
-		// sCLMID でどのマスタデータか判別
-		// dataをmap[string]interface{}に変換
-		dataMap, ok := data.(map[string]interface{})
-		if !ok {
-			tc.Logger.Error("Invalid data format in master data response", zap.String("sCLMID", sCLMID))
-			continue // 処理をスキップして次のデータへ
+		// "sResultCode" は処理しない
+		if sCLMID == "sResultCode" {
+			continue
 		}
+
 		switch sCLMID {
-		case "CLMSystemStatus":
-			var systemStatus domain.SystemStatus
-			if err := mapToStruct(dataMap, &systemStatus); err != nil {
-				return fmt.Errorf("failed to map SystemStatus: %w", err)
+		case "CLMSystemStatus", "CLMDateZyouhou":
+			// これらは単一のオブジェクトなので、今まで通り処理
+			dataMap, ok := data.(map[string]interface{})
+			if !ok {
+				tc.Logger.Error("Invalid data format in master data response", zap.String("sCLMID", sCLMID))
+				continue
 			}
-			m.SystemStatus = systemStatus
-		case "CLMDateZyouhou":
-			var dateInfo domain.DateInfo
-			if err := mapToStruct(dataMap, &dateInfo); err != nil {
-				return fmt.Errorf("failed to map DateInfo: %w", err)
+			switch sCLMID {
+			case "CLMSystemStatus":
+				var systemStatus domain.SystemStatus
+				if err := mapToStruct(dataMap, &systemStatus); err != nil {
+					return fmt.Errorf("failed to map SystemStatus: %w", err)
+				}
+				m.SystemStatus = systemStatus
+			case "CLMDateZyouhou":
+				var dateInfo domain.DateInfo
+				if err := mapToStruct(dataMap, &dateInfo); err != nil {
+					return fmt.Errorf("failed to map DateInfo: %w", err)
+				}
+				m.DateInfo = dateInfo
 			}
-			m.DateInfo = dateInfo
-		case "CLMYobine":
-			var callPrice domain.CallPrice
-			if err := mapToStruct(dataMap, &callPrice); err != nil {
-				return fmt.Errorf("failed to map CallPrice: %w", err)
-			}
-			m.CallPriceMap[strconv.Itoa(callPrice.UnitNumber)] = callPrice
-		case "CLMIssueMstKabu":
-			var issueMaster domain.IssueMaster
-			if err := mapToStruct(dataMap, &issueMaster); err != nil {
-				return fmt.Errorf("failed to map IssueMaster: %w", err)
-			}
-			m.IssueMap[issueMaster.IssueCode] = issueMaster
-		case "CLMIssueSizyouMstKabu":
-			var issueMarket domain.IssueMarketMaster
-			if err := mapToStruct(dataMap, &issueMarket); err != nil {
-				return fmt.Errorf("failed to map IssueMarketMaster: %w", err)
-			}
-			if _, ok := m.IssueMarketMap[issueMarket.IssueCode]; !ok {
-				m.IssueMarketMap[issueMarket.IssueCode] = make(map[string]domain.IssueMarketMaster)
-			}
-			m.IssueMarketMap[issueMarket.IssueCode][issueMarket.MarketCode] = issueMarket
-		case "CLMUnyouStatusKabu":
-			var operationStatusKabu domain.OperationStatusKabu
-			if err := mapToStruct(dataMap, &operationStatusKabu); err != nil {
-				return fmt.Errorf("failed to map OperationStatusKabu: %w", err)
-			}
-			if _, ok := m.OperationStatusKabuMap[operationStatusKabu.ListedMarket]; !ok {
-				m.OperationStatusKabuMap[operationStatusKabu.ListedMarket] = make(map[string]domain.OperationStatusKabu)
-			}
-			m.OperationStatusKabuMap[operationStatusKabu.ListedMarket][operationStatusKabu.Unit] = operationStatusKabu
 
-		case "CLMIssueSizyouKiseiKabu":
-			var issueMarketRegulation domain.IssueMarketRegulation
-			if err := mapToStruct(dataMap, &issueMarketRegulation); err != nil {
-				return fmt.Errorf("failed to map IssueMarketRegulation: %w", err)
+			//配列として定義
+		case "CLMYobine", "CLMIssueMstKabu", "CLMIssueSizyouMstKabu", "CLMIssueSizyouKiseiKabu", "CLMUnyouStatusKabu":
+			dataArray, ok := data.([]interface{}) // 配列として扱う
+			if !ok {
+				tc.Logger.Error("Invalid data format in master data response", zap.String("sCLMID", sCLMID))
+				continue
 			}
-			if _, ok := m.IssueMarketRegulationMap[issueMarketRegulation.IssueCode]; !ok {
-				m.IssueMarketRegulationMap[issueMarketRegulation.IssueCode] = make(map[string]domain.IssueMarketRegulation)
+			for _, item := range dataArray { // 配列の各要素を処理
+				itemMap, ok := item.(map[string]interface{}) // map[string]interface{} に変換
+				if !ok {
+					tc.Logger.Error("Invalid data format in master data response", zap.String("sCLMID", sCLMID))
+					continue
+				}
+				// ここで、sCLMID に応じて適切な構造体にマッピング
+				switch sCLMID {
+				case "CLMYobine":
+					var callPrice domain.CallPrice
+					if err := mapToStruct(itemMap, &callPrice); err != nil {
+						return fmt.Errorf("failed to map CallPrice: %w", err)
+					}
+					m.CallPriceMap[strconv.Itoa(callPrice.UnitNumber)] = callPrice
+				case "CLMIssueMstKabu":
+					var issueMaster domain.IssueMaster
+					if err := mapToStruct(itemMap, &issueMaster); err != nil {
+						return fmt.Errorf("failed to map IssueMaster: %w", err)
+					}
+					m.IssueMap[issueMaster.IssueCode] = issueMaster
+				case "CLMIssueSizyouMstKabu":
+					var issueMarket domain.IssueMarketMaster
+					if err := mapToStruct(itemMap, &issueMarket); err != nil {
+						return fmt.Errorf("failed to map IssueMarketMaster: %w", err)
+					}
+					if _, ok := m.IssueMarketMap[issueMarket.IssueCode]; !ok {
+						m.IssueMarketMap[issueMarket.IssueCode] = make(map[string]domain.IssueMarketMaster)
+					}
+					m.IssueMarketMap[issueMarket.IssueCode][issueMarket.MarketCode] = issueMarket
+
+				case "CLMUnyouStatusKabu":
+					var operationStatusKabu domain.OperationStatusKabu
+					if err := mapToStruct(itemMap, &operationStatusKabu); err != nil {
+						return fmt.Errorf("failed to map OperationStatusKabu: %w", err)
+					}
+					if _, ok := m.OperationStatusKabuMap[operationStatusKabu.ListedMarket]; !ok {
+						m.OperationStatusKabuMap[operationStatusKabu.ListedMarket] = make(map[string]domain.OperationStatusKabu)
+					}
+					m.OperationStatusKabuMap[operationStatusKabu.ListedMarket][operationStatusKabu.Unit] = operationStatusKabu
+
+				case "CLMIssueSizyouKiseiKabu":
+					var issueMarketRegulation domain.IssueMarketRegulation
+					if err := mapToStruct(itemMap, &issueMarketRegulation); err != nil {
+						return fmt.Errorf("failed to map IssueMarketRegulation: %w", err)
+					}
+					if _, ok := m.IssueMarketRegulationMap[issueMarketRegulation.IssueCode]; !ok {
+						m.IssueMarketRegulationMap[issueMarketRegulation.IssueCode] = make(map[string]domain.IssueMarketRegulation)
+					}
+					m.IssueMarketRegulationMap[issueMarketRegulation.IssueCode][issueMarketRegulation.ListedMarket] = issueMarketRegulation
+				}
 			}
-			m.IssueMarketRegulationMap[issueMarketRegulation.IssueCode][issueMarketRegulation.ListedMarket] = issueMarketRegulation
-
-		case "CLMEventDownloadComplete":
-			return nil
-
-		default:
+		case "CLMEventDownloadComplete": //CLMEventDownloadComplete
+		//continue
+		// 最後の sCLMID だった場合は、ここで return nil
+		//return nil
+		default: //sResultCodeをはじく
 			tc.Logger.Warn("Unknown master data type", zap.String("sCLMID", sCLMID))
 		}
 	}

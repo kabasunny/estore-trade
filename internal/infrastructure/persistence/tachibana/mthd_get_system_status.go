@@ -6,5 +6,5 @@ import "estore-trade/internal/domain"
 func (tc *TachibanaClientImple) GetSystemStatus() domain.SystemStatus {
 	tc.Mu.RLock()
 	defer tc.Mu.RUnlock()
-	return tc.systemStatus
+	return tc.SystemStatus
 }

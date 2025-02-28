@@ -6,5 +6,5 @@ import "estore-trade/internal/domain"
 func (tc *TachibanaClientImple) GetDateInfo() domain.DateInfo {
 	tc.Mu.RLock()
 	defer tc.Mu.RUnlock()
-	return tc.dateInfo
+	return tc.DateInfo
 }
