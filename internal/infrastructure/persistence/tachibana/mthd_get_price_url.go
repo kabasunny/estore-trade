@@ -7,10 +7,10 @@ import (
 
 // GetPriceURL はキャッシュされた仮想URL（Price）を返す
 func (tc *TachibanaClientImple) GetPriceURL() (string, error) {
-	tc.mu.RLock()
-	defer tc.mu.RUnlock()
-	if time.Now().Before(tc.expiry) && tc.loggined && tc.priceURL != "" {
-		return tc.priceURL, nil
+	tc.Mu.RLock()
+	defer tc.Mu.RUnlock()
+	if time.Now().Before(tc.Expiry) && tc.Loggined && tc.PriceURL != "" {
+		return tc.PriceURL, nil
 	}
 	return "", fmt.Errorf("price URL not found, need to Login")
 }

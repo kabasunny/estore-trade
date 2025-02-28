@@ -16,7 +16,7 @@ func processResponse(response map[string]interface{}, m *domain.MasterData, tc *
 		// dataをmap[string]interface{}に変換
 		dataMap, ok := data.(map[string]interface{})
 		if !ok {
-			tc.logger.Error("Invalid data format in master data response", zap.String("sCLMID", sCLMID))
+			tc.Logger.Error("Invalid data format in master data response", zap.String("sCLMID", sCLMID))
 			continue // 処理をスキップして次のデータへ
 		}
 		switch sCLMID {
@@ -77,7 +77,7 @@ func processResponse(response map[string]interface{}, m *domain.MasterData, tc *
 			return nil
 
 		default:
-			tc.logger.Warn("Unknown master data type", zap.String("sCLMID", sCLMID))
+			tc.Logger.Warn("Unknown master data type", zap.String("sCLMID", sCLMID))
 		}
 	}
 

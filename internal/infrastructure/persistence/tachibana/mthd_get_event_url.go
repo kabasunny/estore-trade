@@ -7,10 +7,10 @@ import (
 
 // GetEventURL はキャッシュされた仮想URL（EVENT）を返す
 func (tc *TachibanaClientImple) GetEventURL() (string, error) {
-	tc.mu.RLock()
-	defer tc.mu.RUnlock()
-	if time.Now().Before(tc.expiry) && tc.loggined && tc.eventURL != "" {
-		return tc.eventURL, nil
+	tc.Mu.RLock()
+	defer tc.Mu.RUnlock()
+	if time.Now().Before(tc.Expiry) && tc.Loggined && tc.EventURL != "" {
+		return tc.EventURL, nil
 	}
 	return "", fmt.Errorf("event URL not found, need to Login")
 }

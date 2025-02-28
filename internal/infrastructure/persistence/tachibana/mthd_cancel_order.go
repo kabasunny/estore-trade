@@ -15,7 +15,7 @@ func (tc *TachibanaClientImple) CancelOrder(ctx context.Context, orderID string)
 		"sCLMID":          clmidCancelOrder,
 		"sOrderNumber":    orderID,
 		"sEigyouDay":      "",
-		"sSecondPassword": tc.secret,
+		"sSecondPassword": tc.Secret,
 		"p_no":            tc.getPNo(),
 		"p_sd_date":       formatSDDate(time.Now()),
 	}
@@ -23,7 +23,7 @@ func (tc *TachibanaClientImple) CancelOrder(ctx context.Context, orderID string)
 	if err != nil {
 		return fmt.Errorf("failed to marshal payload: %w", err)
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, tc.requestURL, bytes.NewBuffer(payloadJSON))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, tc.RequestURL, bytes.NewBuffer(payloadJSON))
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}

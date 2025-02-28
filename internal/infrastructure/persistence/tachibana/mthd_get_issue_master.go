@@ -4,8 +4,8 @@ import "estore-trade/internal/domain"
 
 // GetIssueMaster は銘柄コードに対応する銘柄情報を返します。
 func (tc *TachibanaClientImple) GetIssueMaster(issueCode string) (domain.IssueMaster, bool) {
-	tc.mu.RLock()
-	defer tc.mu.RUnlock()
+	tc.Mu.RLock()
+	defer tc.Mu.RUnlock()
 
 	// ターゲット銘柄リストが設定されている場合は、チェックを行う
 	tc.targetIssueCodesMu.RLock()

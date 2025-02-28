@@ -26,7 +26,7 @@ func (tc *TachibanaClientImple) PlaceOrder(ctx context.Context, order *domain.Or
 		"sOrderSuryou":        strconv.Itoa(order.Quantity),
 		"sGenkinShinyouKubun": genkinShinyouKubunGenbutsu,
 		"sOrderExpireDay":     orderExpireDay,
-		"sSecondPassword":     tc.secret,
+		"sSecondPassword":     tc.Secret,
 		"p_no":                tc.getPNo(),
 		"p_sd_date":           formatSDDate(time.Now()),
 	}
@@ -34,7 +34,7 @@ func (tc *TachibanaClientImple) PlaceOrder(ctx context.Context, order *domain.Or
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal payload: %w", err)
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, tc.requestURL, bytes.NewBuffer(payloadJSON))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, tc.RequestURL, bytes.NewBuffer(payloadJSON))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
@@ -50,7 +50,7 @@ func (tc *TachibanaClientImple) PlaceOrder(ctx context.Context, order *domain.Or
 	if resultCode, ok := response["sResultCode"].(string); ok && resultCode != "0" {
 		warnCode, _ := response["sWarningCode"].(string)
 		warnText, _ := response["sWarningText"].(string)
-		tc.logger.Error("注文APIがエラーを返しました", zap.String("result_code", resultCode), zap.String("result_text", response["sResultText"].(string)), zap.String("warning_code", warnCode), zap.String("warning_text", warnText))
+		tc.Logger.Error("注文APIがエラーを返しました", zap.String("result_code", resultCode), zap.String("result_text", response["sResultText"].(string)), zap.String("warning_code", warnCode), zap.String("warning_text", warnText))
 		return nil, fmt.Errorf("order API returned an error: %s - %s", resultCode, response["sResultText"])
 	}
 

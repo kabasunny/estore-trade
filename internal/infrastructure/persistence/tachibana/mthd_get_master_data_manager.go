@@ -3,7 +3,7 @@ package tachibana
 import "estore-trade/internal/domain"
 
 func (tc *TachibanaClientImple) GetMasterData() *domain.MasterData {
-	tc.mu.RLock()
-	defer tc.mu.RUnlock()
+	tc.Mu.RLock()
+	defer tc.Mu.RUnlock()
 	return tc.masterData
 }

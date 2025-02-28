@@ -7,8 +7,8 @@ import (
 
 // CheckPriceIsValid は指定された価格が正当であるかを確認
 func (tc *TachibanaClientImple) CheckPriceIsValid(issueCode string, price float64, isNextDay bool) (bool, error) {
-	tc.mu.RLock()
-	defer tc.mu.RUnlock()
+	tc.Mu.RLock()
+	defer tc.Mu.RUnlock()
 
 	// 銘柄の呼値単位番号を取得 (翌営業日の場合は Yoku を使う)
 	issueMarket, ok := tc.issueMarketMap[issueCode]["00"] // 例として市場コード"00" (東証) を使用

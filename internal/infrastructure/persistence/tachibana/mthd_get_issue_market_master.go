@@ -4,8 +4,8 @@ import "estore-trade/internal/domain"
 
 // GetIssueMarketMaster は銘柄コードと市場コードに対応する市場情報を返します。
 func (tc *TachibanaClientImple) GetIssueMarketMaster(issueCode, marketCode string) (domain.IssueMarketMaster, bool) {
-	tc.mu.RLock()
-	defer tc.mu.RUnlock()
+	tc.Mu.RLock()
+	defer tc.Mu.RUnlock()
 
 	// ターゲット銘柄リストが設定されている場合は、チェックを行う
 	tc.targetIssueCodesMu.RLock()

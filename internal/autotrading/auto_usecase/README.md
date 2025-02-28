@@ -6,6 +6,7 @@
 
 `auto_usecase` パッケージは、`AutoTradingUsecase` インターフェースを定義し、その実装を提供
 自動売買の開始・停止、イベント処理、`tradingUsecase` との連携など、自動売買の全体的なフロー制御を担当
+実際の注文実行、およびDBの更新は `usecase.TradingUsecase` に委譲
 
 ## ファイル構成
 
