@@ -25,7 +25,7 @@ func (tc *TachibanaClientImple) DownloadMasterData(ctx context.Context) (*domain
 		return nil, fmt.Errorf("ペイロードのJSONマーシャルに失敗: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, tc.MasterURL, bytes.NewBuffer(payloadJSON))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, tc.masterURL, bytes.NewBuffer(payloadJSON))
 	if err != nil {
 		return nil, fmt.Errorf("マスターデータのリクエスト作成に失敗: %w", err)
 	}
@@ -56,7 +56,7 @@ func (tc *TachibanaClientImple) DownloadMasterData(ctx context.Context) (*domain
 	}
 
 	// ダウンロードしたデータをTachibanaClientImpleにセット
-	tc.MasterData = m
+	tc.masterData = m
 
 	return m, nil // 成功
 }

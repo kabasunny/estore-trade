@@ -4,7 +4,7 @@ import "estore-trade/internal/domain"
 
 // GetDateInfo は日付情報を取得します。
 func (tc *TachibanaClientImple) GetDateInfo() domain.DateInfo {
-	tc.Mu.RLock()
-	defer tc.Mu.RUnlock()
-	return tc.DateInfo
+	tc.mu.RLock()
+	defer tc.mu.RUnlock()
+	return tc.dateInfo
 }

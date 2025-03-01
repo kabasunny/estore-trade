@@ -2,15 +2,25 @@ package tachibana
 
 import (
 	"encoding/json"
+	"fmt"
 )
 
 // mapToStruct は、map[string]interface{} を構造体にマッピングする汎用関数
 func mapToStruct(data map[string]interface{}, result interface{}) error {
+	// fmt.Printf("DEBUG: mapToStruct input: %+v\n", data)
 	b, err := json.Marshal(data)
 	if err != nil {
+		fmt.Printf("ERROR: json.Marshal failed: %v\n", err)
 		return err
 	}
-	return json.Unmarshal(b, result)
+	// fmt.Printf("DEBUG: JSON output: %s\n", string(b)) // 追加
+
+	err = json.Unmarshal(b, result)
+	if err != nil {
+		fmt.Printf("ERROR: json.Unmarshal failed: %v\n", err)
+	}
+	// fmt.Printf("DEBUG: mapToStruct output: %+v, error: %v\n", result, err)
+	return err
 }
 
 // OperationStatusKabu 構造体と map[string]map[string]OperationStatusKabu] 型のデータを使った具体例で、mapToStruct の処理の流れ

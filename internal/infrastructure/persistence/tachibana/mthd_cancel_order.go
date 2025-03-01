@@ -19,7 +19,7 @@ func (tc *TachibanaClientImple) CancelOrder(ctx context.Context, orderID string)
 		"sCLMID":          clmidCancelOrder,
 		"sOrderNumber":    orderID,
 		"sEigyouDay":      "", // 空で良いか立花証券のAPI仕様を確認
-		"sSecondPassword": tc.Secret,
+		"sSecondPassword": tc.secret,
 		"p_no":            tc.getPNo(),
 		"p_sd_date":       formatSDDate(time.Now()),
 	}
@@ -28,7 +28,7 @@ func (tc *TachibanaClientImple) CancelOrder(ctx context.Context, orderID string)
 		return fmt.Errorf("failed to marshal payload: %w", err)
 	}
 
-	requestURL, err := url.JoinPath(tc.RequestURL, "cancel") //tc.RequestURLが正しい前提
+	requestURL, err := url.JoinPath(tc.requestURL, "cancel") //tc.RequestURLが正しい前提
 	if err != nil {
 		return fmt.Errorf("failed to create request URL: %w", err)
 	}
@@ -55,11 +55,11 @@ func (tc *TachibanaClientImple) CancelOrder(ctx context.Context, orderID string)
 		resultText, ok := response["sResultText"].(string)
 		if !ok {
 			// 型アサーションに失敗した場合の処理 (例えば、ログに出力してエラーを返す)
-			tc.Logger.Error("sResultText is not a string", zap.Any("sResultText", response["sResultText"]))
+			tc.logger.Error("sResultText is not a string", zap.Any("sResultText", response["sResultText"]))
 			return fmt.Errorf("sResultText is not a string in the response") // エラーだけを返す
 		}
 
-		tc.Logger.Error("注文キャンセルAPIがエラーを返しました",
+		tc.logger.Error("注文キャンセルAPIがエラーを返しました",
 			zap.String("result_code", resultCode),
 			zap.String("result_text", resultText), // resultText を使用
 			zap.String("order_id", orderID),       // orderIDもログに出力

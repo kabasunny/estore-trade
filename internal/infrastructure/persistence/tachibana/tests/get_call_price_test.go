@@ -2,7 +2,6 @@
 package tachibana_test
 
 import (
-	"sync"
 	"testing"
 
 	"estore-trade/internal/domain"
@@ -12,15 +11,14 @@ import (
 )
 
 func TestTachibanaClientImple_GetCallPrice(t *testing.T) {
-	// テスト用の TachibanaClientImple インスタンスを作成 (callPriceMap を初期化)
-	client := &tachibana.TachibanaClientImple{
-		// ... 他のフィールド ...
-		CallPriceMap: map[string]domain.CallPrice{
-			"101": {UnitNumber: 101, Price1: 3000, UnitPrice1: 1},
-			"102": {UnitNumber: 102, Price1: 10000, UnitPrice1: 5},
-		},
-		Mu: sync.RWMutex{}, // テスト時に RWMutex が初期化されるようにする
+	client, _ := tachibana.SetupTestClient(t) // SetupTestClient を使う
+
+	// テストデータをセット
+	callPriceMap := map[string]domain.CallPrice{
+		"101": {UnitNumber: "101", Price1: 3000, UnitPrice1: 1},
+		"102": {UnitNumber: "102", Price1: 10000, UnitPrice1: 5},
 	}
+	client.SetCallPriceMapForTest(callPriceMap)
 
 	t.Run("Success", func(t *testing.T) {
 		callPrice, ok := client.GetCallPrice("101")

@@ -1,5 +1,5 @@
 // internal/infrastructure/persistence/tachibana/tests/cancel_order_test.go
-package tachibana_test // パッケージ名は tachibana_test
+package tachibana_test
 
 import (
 	"context"

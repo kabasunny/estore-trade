@@ -2,31 +2,17 @@
 package tachibana_test
 
 import (
-	"sync"
+	//"sync" //不要
 	"testing"
 
-	"estore-trade/internal/domain"
+	//"estore-trade/internal/domain"//不要
 	"estore-trade/internal/infrastructure/persistence/tachibana"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestTachibanaClientImple_GetOperationStatusKabu(t *testing.T) {
-	// テスト用の TachibanaClientImple インスタンスを作成 (OperationStatusKabuMap を初期化)
-	client := &tachibana.TachibanaClientImple{
-		OperationStatusKabuMap: map[string]map[string]domain.OperationStatusKabu{
-			"00": { // 東証
-				"0101": {ListedMarket: "00", Unit: "0101", Status: "001"}, // 株式
-			},
-		},
-		// 他の必要なフィールドも初期化
-		CallPriceMap:             make(map[string]domain.CallPrice),
-		IssueMap:                 make(map[string]domain.IssueMaster),
-		IssueMarketMap:           make(map[string]map[string]domain.IssueMarketMaster),
-		IssueMarketRegulationMap: make(map[string]map[string]domain.IssueMarketRegulation),
-		Mu:                       sync.RWMutex{}, // RWMutex の初期化
-		TargetIssueCodesMu:       sync.RWMutex{},
-	}
+	client, _ := tachibana.SetupTestClient(t)
 
 	t.Run("Success", func(t *testing.T) {
 		status, ok := client.GetOperationStatusKabu("00", "0101")

@@ -16,17 +16,17 @@ func NewTachibanaClient(cfg *config.Config, logger *zap.Logger) TachibanaClient 
 		return nil
 	}
 	return &TachibanaClientImple{
-		BaseURL:                  parsedURL,
-		ApiKey:                   cfg.TachibanaAPIKey,
-		Secret:                   cfg.TachibanaAPISecret,
-		Logger:                   logger,
-		Loggined:                 false,
-		PNo:                      0,
-		CallPriceMap:             make(map[string]domain.CallPrice),
-		IssueMap:                 make(map[string]domain.IssueMaster),
-		IssueMarketMap:           make(map[string]map[string]domain.IssueMarketMaster),
-		IssueMarketRegulationMap: make(map[string]map[string]domain.IssueMarketRegulation),
-		OperationStatusKabuMap:   make(map[string]map[string]domain.OperationStatusKabu),
-		TargetIssueCodes:         make([]string, 0),
+		baseURL:                  parsedURL,
+		apiKey:                   cfg.TachibanaAPIKey,
+		secret:                   cfg.TachibanaAPISecret,
+		logger:                   logger,
+		loggined:                 false,
+		pNo:                      0,
+		callPriceMap:             make(map[string]domain.CallPrice),
+		issueMap:                 make(map[string]domain.IssueMaster),
+		issueMarketMap:           make(map[string]map[string]domain.IssueMarketMaster),
+		issueMarketRegulationMap: make(map[string]map[string]domain.IssueMarketRegulation),
+		operationStatusKabuMap:   make(map[string]map[string]domain.OperationStatusKabu),
+		targetIssueCodes:         make([]string, 0),
 	}
 }

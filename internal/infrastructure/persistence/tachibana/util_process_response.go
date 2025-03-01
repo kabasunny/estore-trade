@@ -4,7 +4,6 @@ package tachibana
 import (
 	"estore-trade/internal/domain"
 	"fmt"
-	"strconv"
 
 	"go.uber.org/zap"
 )
@@ -21,7 +20,7 @@ func processResponse(response map[string]interface{}, m *domain.MasterData, tc *
 			// これらは単一のオブジェクトなので、今まで通り処理
 			dataMap, ok := data.(map[string]interface{})
 			if !ok {
-				tc.Logger.Error("Invalid data format in master data response", zap.String("sCLMID", sCLMID))
+				tc.logger.Error("Invalid data format in master data response", zap.String("sCLMID", sCLMID))
 				continue
 			}
 			switch sCLMID {
@@ -43,29 +42,35 @@ func processResponse(response map[string]interface{}, m *domain.MasterData, tc *
 		case "CLMYobine", "CLMIssueMstKabu", "CLMIssueSizyouMstKabu", "CLMIssueSizyouKiseiKabu", "CLMUnyouStatusKabu":
 			dataArray, ok := data.([]interface{}) // 配列として扱う
 			if !ok {
-				tc.Logger.Error("Invalid data format in master data response", zap.String("sCLMID", sCLMID))
+				tc.logger.Error("Invalid data format in master data response", zap.String("sCLMID", sCLMID))
 				continue
 			}
 			for _, item := range dataArray { // 配列の各要素を処理
 				itemMap, ok := item.(map[string]interface{}) // map[string]interface{} に変換
 				if !ok {
-					tc.Logger.Error("Invalid data format in master data response", zap.String("sCLMID", sCLMID))
+					tc.logger.Error("Invalid data format in master data response", zap.String("sCLMID", sCLMID))
 					continue
 				}
 				// ここで、sCLMID に応じて適切な構造体にマッピング
 				switch sCLMID {
 				case "CLMYobine":
 					var callPrice domain.CallPrice
+					fmt.Printf("itemMap: %v\n", itemMap)
+
 					if err := mapToStruct(itemMap, &callPrice); err != nil {
 						return fmt.Errorf("failed to map CallPrice: %w", err)
 					}
-					m.CallPriceMap[strconv.Itoa(callPrice.UnitNumber)] = callPrice
+					m.CallPriceMap[callPrice.UnitNumber] = callPrice
+					fmt.Printf("callPrice: %v\n", callPrice)
 				case "CLMIssueMstKabu":
 					var issueMaster domain.IssueMaster
 					if err := mapToStruct(itemMap, &issueMaster); err != nil {
 						return fmt.Errorf("failed to map IssueMaster: %w", err)
 					}
+					// fmt.Printf("DEBUG: Mapping issueCode: %s, issueName: %s\n", issueMaster.IssueCode, issueMaster.IssueName)
 					m.IssueMap[issueMaster.IssueCode] = issueMaster
+					// fmt.Printf("DEBUG: Current IssueMap: %+v\n", m.IssueMap)
+
 				case "CLMIssueSizyouMstKabu":
 					var issueMarket domain.IssueMarketMaster
 					if err := mapToStruct(itemMap, &issueMarket); err != nil {
@@ -102,7 +107,7 @@ func processResponse(response map[string]interface{}, m *domain.MasterData, tc *
 		// 最後の sCLMID だった場合は、ここで return nil
 		//return nil
 		default: //sResultCodeをはじく
-			tc.Logger.Warn("Unknown master data type", zap.String("sCLMID", sCLMID))
+			tc.logger.Warn("Unknown master data type", zap.String("sCLMID", sCLMID))
 		}
 	}
 

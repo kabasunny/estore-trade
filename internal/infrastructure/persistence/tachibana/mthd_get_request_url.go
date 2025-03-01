@@ -7,10 +7,10 @@ import (
 
 // GetRequestURL はキャッシュされた仮想URL（REQUEST）を返す
 func (tc *TachibanaClientImple) GetRequestURL() (string, error) {
-	tc.Mu.RLock()
-	defer tc.Mu.RUnlock()
-	if time.Now().Before(tc.Expiry) && tc.Loggined && tc.RequestURL != "" {
-		return tc.RequestURL, nil
+	tc.mu.RLock()
+	defer tc.mu.RUnlock()
+	if time.Now().Before(tc.expiry) && tc.loggined && tc.requestURL != "" {
+		return tc.requestURL, nil
 	}
 	return "", fmt.Errorf("request URL not found, need to Login")
 }

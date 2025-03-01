@@ -49,7 +49,7 @@ func (tc *TachibanaClientImple) GetPriceData(ctx context.Context, issueCodes []s
 	if resultCode, ok := response["sResultCode"].(string); ok && resultCode != "0" {
 		warnCode, _ := response["sWarningCode"].(string)
 		warnText, _ := response["sWarningText"].(string)
-		tc.Logger.Error("price data API returned an error", zap.String("result_code", resultCode), zap.String("result_text", response["sResultText"].(string)), zap.String("warning_code", warnCode), zap.String("warning_text", warnText))
+		tc.logger.Error("price data API returned an error", zap.String("result_code", resultCode), zap.String("result_text", response["sResultText"].(string)), zap.String("warning_code", warnCode), zap.String("warning_text", warnText))
 		return nil, fmt.Errorf("price data API returned an error: %s - %s", resultCode, response["sResultText"])
 	}
 

@@ -2,27 +2,25 @@
 package tachibana_test
 
 import (
-	"context"
+	//"context"
+	//"sync"
 	"testing"
 
+	//"estore-trade/internal/domain" //不要
 	"estore-trade/internal/infrastructure/persistence/tachibana"
 
-	"github.com/jarcoal/httpmock"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestTachibanaClientImple_GetIssueMarketRegulation(t *testing.T) {
 	client, _ := tachibana.SetupTestClient(t)
-	defer httpmock.DeactivateAndReset()
-
-	t.Logf("Before Test: %+v", client.IssueMarketRegulationMap)
 
 	t.Run("Success", func(t *testing.T) {
 		regulation, ok := client.GetIssueMarketRegulation("7974", "00")
-		t.Logf("Regulation: %+v", regulation)
 		assert.True(t, ok)
 		assert.Equal(t, "7974", regulation.IssueCode)
 		assert.Equal(t, "00", regulation.ListedMarket)
+		assert.Equal(t, "1", regulation.StopKubun)
 	})
 
 	t.Run("Issue Not Found", func(t *testing.T) {
@@ -34,33 +32,45 @@ func TestTachibanaClientImple_GetIssueMarketRegulation(t *testing.T) {
 		_, ok := client.GetIssueMarketRegulation("7974", "XX") // 存在しない市場コード
 		assert.False(t, ok)
 	})
+}
+func TestTargetIssuesGetIssueMarketRegulation(t *testing.T) {
+	client, _ := tachibana.SetupTestClient(t)
 
-	t.Run("Target Issue - Found", func(t *testing.T) {
-		// ターゲット銘柄リストを設定
-		client.TargetIssueCodesMu.Lock()
-		client.SetTargetIssues(context.Background(), []string{"7974"})
-		client.TargetIssueCodesMu.Unlock()
+	tests := []struct {
+		name       string
+		issueCodes []string
+		issueCode  string
+		marketCode string
+		expect     bool
+	}{
+		{
+			name:       "Target Issue - Found",
+			issueCodes: []string{"7974"},
+			issueCode:  "7974",
+			marketCode: "00",
+			expect:     true,
+		},
+		{
+			name:       "Target Issue - Not Found",
+			issueCodes: []string{"9984"},
+			issueCode:  "7974",
+			marketCode: "00",
+			expect:     false,
+		},
+		{
+			name:       "Target Issue - Empty",
+			issueCodes: []string{},
+			issueCode:  "7974",
+			marketCode: "00",
+			expect:     true, // ターゲットリストが空の場合は、issueMarketRegulationMapにあればtrue
+		},
+	}
 
-		regulation, ok := client.GetIssueMarketRegulation("7974", "00")
-		assert.True(t, ok)
-		assert.Equal(t, "7974", regulation.IssueCode)
-		assert.Equal(t, "00", regulation.ListedMarket)
-	})
-
-	t.Run("Target Issue - Not Found", func(t *testing.T) {
-		// ターゲット銘柄リストを設定 (7974 は含まない)
-		client.TargetIssueCodesMu.Lock()
-		client.SetTargetIssues(context.Background(), []string{"9984"})
-		client.TargetIssueCodesMu.Unlock()
-		_, ok := client.GetIssueMarketRegulation("7974", "00") // ターゲット銘柄リストに含まれていない
-		assert.False(t, ok)
-	})
-
-	t.Run("Target Issue - Empty", func(t *testing.T) {
-		client.TargetIssueCodesMu.Lock()
-		client.SetTargetIssues(context.Background(), []string{}) //空にする
-		client.TargetIssueCodesMu.Unlock()
-		_, ok := client.GetIssueMarketRegulation("7974", "00")
-		assert.False(t, ok) //ターゲット銘柄がない場合は、false
-	})
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			client.SetTargetIssueCodesForTest(tt.issueCodes) //ヘルパーメソッドを使用
+			_, ok := client.GetIssueMarketRegulation(tt.issueCode, tt.marketCode)
+			assert.Equal(t, tt.expect, ok)
+		})
+	}
 }

@@ -2,32 +2,18 @@
 package tachibana_test
 
 import (
-	"context"
-	"sync" // Mutexの初期化に必要
+	//"context"
+	//"sync" // Mutexの初期化に必要 //不要
 	"testing"
 
-	"estore-trade/internal/domain"
+	//"estore-trade/internal/domain" //不要
 	"estore-trade/internal/infrastructure/persistence/tachibana"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestTachibanaClientImple_GetIssueMaster(t *testing.T) {
-	// テスト用の TachibanaClientImple インスタンスを作成
-	client := &tachibana.TachibanaClientImple{
-		// 各フィールドを初期化
-		IssueMap: map[string]domain.IssueMaster{
-			"7974": {IssueCode: "7974", IssueName: "任天堂"},
-			"9984": {IssueCode: "9984", IssueName: "ソフトバンク"},
-		},
-		// 他の必要なフィールドも初期化
-		CallPriceMap:             make(map[string]domain.CallPrice),
-		IssueMarketMap:           make(map[string]map[string]domain.IssueMarketMaster),
-		IssueMarketRegulationMap: make(map[string]map[string]domain.IssueMarketRegulation),
-		OperationStatusKabuMap:   make(map[string]map[string]domain.OperationStatusKabu),
-		Mu:                       sync.RWMutex{}, // RWMutex の初期化
-		TargetIssueCodesMu:       sync.RWMutex{}, // RWMutex の初期化
-	}
+	client, _ := tachibana.SetupTestClient(t)
 
 	t.Run("Success", func(t *testing.T) {
 		issue, ok := client.GetIssueMaster("7974")
@@ -41,37 +27,43 @@ func TestTachibanaClientImple_GetIssueMaster(t *testing.T) {
 		assert.False(t, ok)
 	})
 
-	t.Run("Target Issue - Found", func(t *testing.T) {
-		// ターゲット銘柄リストを設定
-		client.Mu.Lock() // グローバルなミューテックスをロック
-		client.TargetIssueCodesMu.Lock()
-		client.SetTargetIssues(context.Background(), []string{"7974"})
-		client.TargetIssueCodesMu.Unlock()
-		client.Mu.Unlock() // グローバルなミューテックスをアンロック
+}
 
-		issue, ok := client.GetIssueMaster("7974")
-		assert.True(t, ok)
-		assert.Equal(t, "7974", issue.IssueCode)
-	})
+// TestTargetIssuesGetIssueMaster にまとめる
+func TestTargetIssuesGetIssueMaster(t *testing.T) {
+	client, _ := tachibana.SetupTestClient(t)
 
-	t.Run("Target Issue - Not Found", func(t *testing.T) {
-		// ターゲット銘柄リストを設定 (7974 は含まない)
-		client.Mu.Lock()
-		client.TargetIssueCodesMu.Lock()
-		client.SetTargetIssues(context.Background(), []string{"9984"})
-		client.TargetIssueCodesMu.Unlock()
-		client.Mu.Unlock()
-		_, ok := client.GetIssueMaster("7974") // ターゲット銘柄リストに含まれていない
-		assert.False(t, ok)
-	})
+	tests := []struct {
+		name       string
+		issueCodes []string
+		issueCode  string
+		expect     bool
+	}{
+		{
+			name:       "Target Issue - Found",
+			issueCodes: []string{"7974"},
+			issueCode:  "7974",
+			expect:     true,
+		},
+		{
+			name:       "Target Issue - Not Found",
+			issueCodes: []string{"9984"},
+			issueCode:  "7974",
+			expect:     false,
+		},
+		{
+			name:       "Target Issue - Empty",
+			issueCodes: []string{},
+			issueCode:  "7974",
+			expect:     false, // ターゲットリストが空の場合は、issueMapにあってもfalse
+		},
+	}
 
-	t.Run("Target Issue - Empty", func(t *testing.T) {
-		client.Mu.Lock()
-		client.TargetIssueCodesMu.Lock()
-		client.SetTargetIssues(context.Background(), []string{}) //空にする
-		client.TargetIssueCodesMu.Unlock()
-		client.Mu.Unlock()
-		_, ok := client.GetIssueMaster("7974")
-		assert.False(t, ok) //ターゲット銘柄がない場合は、false
-	})
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			client.SetTargetIssueCodesForTest(tt.issueCodes) //ヘルパーメソッドを使用
+			_, ok := client.GetIssueMaster(tt.issueCode)
+			assert.Equal(t, tt.expect, ok)
+		})
+	}
 }

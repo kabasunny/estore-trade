@@ -27,7 +27,7 @@ func ConvertOrderToPlaceOrderPayload(order *domain.Order, tc *TachibanaClientImp
 		"sOrderSuryou":        strconv.Itoa(order.Quantity),
 		"sGenkinShinyouKubun": genkinShinyouKubunGenbutsu,
 		"sOrderExpireDay":     orderExpireDay,
-		"sSecondPassword":     tc.Secret,
+		"sSecondPassword":     tc.secret,
 		"p_no":                tc.getPNo(),
 		//"p_sd_date":           formatSDDate(time.Now()), // formatSDDate は util_format_sd_date.go で定義
 	}

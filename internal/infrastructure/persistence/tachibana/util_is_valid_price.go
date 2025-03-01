@@ -2,11 +2,14 @@ package tachibana
 
 import (
 	"estore-trade/internal/domain"
+	"fmt"
 	"math"
 )
 
 // isValidPrice は、注文価格が呼値の単位に従っているかをチェックする関数
 func isValidPrice(price float64, callPrice domain.CallPrice) bool {
+	// fmt.Printf("isValidPrice called with price: %f, callPrice: %+v\n", price, callPrice)
+
 	prices := [20]float64{
 		callPrice.Price1, callPrice.Price2, callPrice.Price3, callPrice.Price4, callPrice.Price5,
 		callPrice.Price6, callPrice.Price7, callPrice.Price8, callPrice.Price9, callPrice.Price10,
@@ -20,11 +23,26 @@ func isValidPrice(price float64, callPrice domain.CallPrice) bool {
 		callPrice.UnitPrice16, callPrice.UnitPrice17, callPrice.UnitPrice18, callPrice.UnitPrice19, callPrice.UnitPrice20,
 	}
 
+	// priceがどの価格帯に属するか判定する
 	for i := 0; i < len(prices); i++ {
-		if price <= prices[i] {
-			remainder := math.Mod(price, unitPrices[i])
-			return remainder == 0
+		if i == 0 {
+			// 最初の価格帯
+			if price <= prices[i] {
+				remainder := math.Mod(price, unitPrices[i])
+				fmt.Printf("  First price range check: price <= prices[%d] (%f <= %f), unitPrices[%d]: %f, remainder: %f\n", i, price, prices[i], i, unitPrices[i], remainder) // ログ出力: i は %d
+				return remainder == 0
+			}
+		} else {
+			// それ以降の価格帯
+			if prices[i-1] < price && price <= prices[i] {
+				remainder := math.Mod(price-prices[i-1], unitPrices[i])
+				fmt.Printf("  Price range check: prices[%d] < price <= prices[%d] (%f < %f <= %f), unitPrices[%d]: %f, remainder: %f\n", i-1, i, prices[i-1], price, prices[i], i, unitPrices[i], remainder) // ログ出力: i-1, i は %d
+				return remainder == 0
+			}
 		}
 	}
-	return false // ここには到達しないはずだが、念のため
+
+	// どの価格帯にも属さない場合は呼値テーブルの範囲外
+	fmt.Printf("  Price out of range\n") // ログ出力
+	return false
 }
