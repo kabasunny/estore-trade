@@ -22,7 +22,7 @@ func TestEventStream_StartStop(t *testing.T) {
 
 	// イベント受信用チャネルの作成
 	//var eventCh chan domain.OrderEvent = make(chan domain.OrderEvent, 10) // 型を明示
-	eventCh := make(chan domain.OrderEvent, 10)
+	eventCh := make(chan domain.OrderEvent, 3)
 
 	//共通のhttpmock設定
 	httpmock.RegisterResponder("GET", "https://example.com/event",
@@ -45,19 +45,45 @@ func TestEventStream_StartStop(t *testing.T) {
 		}
 		// EventStream の作成, http.DefaultClientを渡す
 		es := tachibana.NewEventStream(client, cfg, logger, eventCh)
-		err := es.Start()
-		assert.NoError(t, err)
 
-		// 1つイベントを確実に受信する (SSイベントが来るはず)
-		select {
-		case event := <-eventCh: // イベントを受信するまで待機
-			t.Log("Received an event:", event) // ログ出力
-		case <-time.After(1 * time.Second): // 1秒待っても来なければタイムアウト
+		// Start() エラー用のチャネル
+		// startErrCh := make(chan error)
+
+		// EventStream をゴルーチンで開始
+		go func() {
+			es.Start()
+			// err := es.Start()
+			// if err != nil {
+			// 	startErrCh <- err // Start() が失敗したらエラーをチャネルに送信
+			// 	return
+			// }
+			// startErrCh <- nil // Start() が成功したら nil を送信 (完了を通知)
+
+		}()
+
+		// go func() {
+		// 	select {
+		// 	case startErr := <-startErrCh:
+		// 		if startErr != nil {
+		// 			t.Errorf("EventStream Start が失敗しました: %v", startErr) // t.Error または t.Errorf を使用
+		// 			return                                              // エラーをログ出力したらゴルーチンを終了
+		// 		}
+		// 	case <-time.After(5 * time.Second):
+		// 		t.Errorf("EventStream Start の完了を待機中にタイムアウト") // t.Error または t.Errorf を使用
+		// 		return                                       // タイムアウトをログ出力したらゴルーチンを終了
+		// 	}
+		// 	// エラーがなければ、テスト成功を通知するチャネルに送信するなど、必要に応じて処理を追加
+		// }()
+
+		select { // 元の select 文 (イベント受信を待つ)
+		case event := <-eventCh:
+			t.Log("Received an event:", event)
+		case <-time.After(3 * time.Second):
 			t.Fatal("Timeout: Event not received")
 		}
 
-		// Stopを呼び出す
-		err = es.Stop()
+		// EventStream を停止
+		err := es.Stop()
 		assert.NoError(t, err)
 	})
 

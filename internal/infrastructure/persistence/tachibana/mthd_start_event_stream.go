@@ -16,13 +16,19 @@ func (es *EventStream) Start() error {
 	defer cancel()
 
 	// ログインして仮想URLを取得 (tachibanaClient.Login はセッション管理を行うように修正済み)
-	err := es.tachibanaClient.Login(ctx, es.config)
+	startTime := time.Now()
+	err := es.tachibanaClient.Login(ctx, es.config) // (1) ログイン
+	loginDuration := time.Since(startTime)
+	es.logger.Info("Login 完了", zap.Duration("duration", loginDuration), zap.Error(err)) // Login の処理時間をログ出力
 	if err != nil {
 		es.logger.Error("Failed to login for event stream", zap.Error(err))
 		return fmt.Errorf("failed to login for event stream: %w", err)
 	}
 
-	eventURL, err := es.tachibanaClient.GetEventURL() // GetEventURL はエラーを返す可能性がある
+	startTime = time.Now()
+	eventURL, err := es.tachibanaClient.GetEventURL() // (2) イベント URL の取得
+	getUrlDuration := time.Since(startTime)
+	es.logger.Info("GetEventURL 完了", zap.Duration("duration", getUrlDuration), zap.Error(err)) // GetEventURL の処理時間をログ出力
 	if err != nil {
 		es.logger.Error("Failed to get event URL", zap.Error(err))
 		return fmt.Errorf("failed to get event URL: %w", err)
@@ -33,7 +39,10 @@ func (es *EventStream) Start() error {
 		eventURL, es.config.EventRid, es.config.EventBoardNo, es.config.EventEvtCmd)
 
 	// HTTP GET リクエスト (Long Polling) 初回のみ
-	es.req, err = http.NewRequestWithContext(ctx, http.MethodGet, eventURL, nil)
+	startTime = time.Now()
+	es.req, err = http.NewRequestWithContext(ctx, http.MethodGet, eventURL, nil) // (3) リクエストの作成
+	reqDuration := time.Since(startTime)
+	es.logger.Info("CreateRequest 完了", zap.Duration("duration", reqDuration), zap.Error(err)) // CreateRequest の処理時間をログ出力
 	if err != nil {
 		es.logger.Error("Failed to create event stream request", zap.Error(err))
 		return fmt.Errorf("failed to create event stream request: %w", err)
@@ -87,7 +96,7 @@ func (es *EventStream) Start() error {
 					// usecase層への通知 (sendEvent メソッドを呼び出す)
 					es.sendEvent(event)
 				}
-				time.Sleep(100 * time.Millisecond) //
+				time.Sleep(1000 * time.Millisecond) //
 			} else {
 				// HTTPエラーの場合
 				resp.Body.Close()
