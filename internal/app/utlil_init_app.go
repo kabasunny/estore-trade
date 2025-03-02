@@ -35,7 +35,17 @@ func InitApp() (*App, error) {
 		return nil, fmt.Errorf("DB接続エラー: %w", err)
 	}
 
-	tachibanaClient := tachibana.NewTachibanaClient(cfg, logger)
+	// MasterDataRepository のインスタンスを作成
+	masterDataRepo := master.NewMasterDataRepository(db.DB())
+	// DBからマスタデータを取得
+	// (ここでは仮に空のコンテキストを使用していますが、必要に応じて適切なコンテキストを使用してください)
+	md, err := masterDataRepo.GetMasterData(context.Background())
+	if err != nil {
+		return nil, fmt.Errorf("failed to get master data from DB: %w", err)
+	}
+
+	// TachibanaClient のインスタンスを作成 (masterData を渡す)
+	tachibanaClient := tachibana.NewTachibanaClient(cfg, logger, md) //mdを追加
 	if err := tachibanaClient.Login(context.Background(), cfg); err != nil {
 		return nil, fmt.Errorf("APIログインに失敗: %w", err)
 	}
@@ -47,7 +57,6 @@ func InitApp() (*App, error) {
 
 	orderRepo := order.NewOrderRepository(db.DB())
 	accountRepo := account.NewAccountRepository(db.DB())
-	masterDataRepo := master.NewMasterDataRepository(db.DB()) // 追加
 
 	tradingUsecase := usecase.NewTradingUsecase(tachibanaClient, logger, orderRepo, accountRepo, cfg)
 

@@ -13,17 +13,22 @@ import (
 
 // parseEvent は、受信したメッセージをパースして domain.OrderEvent に変換
 func (es *EventStream) parseEvent(message []byte) (*domain.OrderEvent, error) {
+	// API仕様により、項目毎に"^A"で、データを区別する
 	fields := strings.Split(string(message), "^A")
 	event := &domain.OrderEvent{}
 	order := &domain.Order{} // 注文情報 (ECの場合)
 
 	for _, field := range fields {
+		// 項目と値を"^B"で、データを区別する
 		keyValue := strings.SplitN(field, "^B", 2)
 		if len(keyValue) != 2 {
 			continue
 		}
 		key := keyValue[0]
 		value := keyValue[1]
+
+		// 値を"^C"で区切り、複数の値を考慮する
+		values := strings.Split(value, "^C")
 
 		switch key {
 		case "p_no": // 無視
@@ -47,6 +52,13 @@ func (es *EventStream) parseEvent(message []byte) (*domain.OrderEvent, error) {
 			event.ErrMsg = value
 		case "p_cmd": // コマンド (イベントタイプ)
 			event.EventType = value
+			if value == "SS" {
+				// システムステータスイベントの処理
+				// (例: event.SystemStatus のようなフィールドに値を設定)
+				// 今回は特に処理しない
+				es.logger.Info("Received system status event") // ログだけ出力
+				return event, nil                              // 処理を終了
+			}
 		case "p_ENO": // イベント番号
 			eno, err := strconv.Atoi(value)
 			if err != nil {
@@ -63,7 +75,10 @@ func (es *EventStream) parseEvent(message []byte) (*domain.OrderEvent, error) {
 		case "p_IC": // 銘柄コード
 			order.Symbol = value
 		case "p_MC": // 市場コード
-			// ...
+			// values を使うように修正 (将来、複数の値が返ってくる場合に備えて)
+			if len(values) > 0 {
+				order.MarketCode = values[0] // 現状は最初の値だけ使用
+			}
 		case "p_BBKB": // 売買区分
 			switch value {
 			case "1":
@@ -83,7 +98,7 @@ func (es *EventStream) parseEvent(message []byte) (*domain.OrderEvent, error) {
 			if err == nil {
 				order.Quantity = quantity
 			}
-			// ... 他のECのフィールドも同様に処理 ...
+		// ... 他のECのフィールドも同様に処理 ...
 
 		default: // その他の場合
 			//es.logger.Warn("Unknown field in event message", zap.String("key", key)) // ログは多すぎるのでコメントアウト

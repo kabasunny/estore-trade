@@ -11,7 +11,7 @@ func (tc *TachibanaClientImple) GetIssueMarketRegulation(issueCode, marketCode s
 	tc.mu.RLock()
 	defer tc.mu.RUnlock()
 
-	marketMap, ok := tc.issueMarketRegulationMap[issueCode]
+	marketMap, ok := tc.masterData.IssueMarketRegulationMap[issueCode]
 	if !ok {
 		fmt.Printf("IssueCode %s not found in IssueMarketRegulationMap\n", issueCode)
 		return domain.IssueMarketRegulation{}, false

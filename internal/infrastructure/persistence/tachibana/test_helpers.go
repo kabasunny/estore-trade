@@ -29,13 +29,15 @@ func SetupTestClient(t *testing.T) (*TachibanaClientImple, *config.Config) {
 		EventEvtCmd:  "EC,TE", // カンマ区切りで複数指定可能
 	}
 	logger, _ := zap.NewDevelopment() // テスト用のロガー
+	// モックの MasterData を作成
+	mockMasterData := &domain.MasterData{}
 
-	client := NewTachibanaClient(cfg, logger).(*TachibanaClientImple)
+	client := NewTachibanaClient(cfg, logger, mockMasterData).(*TachibanaClientImple) // masterData を渡す
 
 	// DownloadMasterData メソッドのモック (より完全なデータ、API 仕様に準拠)
 	//必要なデータのみ追加 + CallPrice関連の値追加
 	mockMasterResponse := map[string]interface{}{
-		"sResultCode": "0",
+		"sResultCode": "0", // 0:正常
 		"CLMIssueMstKabu": []interface{}{ // 配列に変更
 			map[string]interface{}{"sCLMID": "CLMIssueMstKabu", "sIssueCode": "7974", "sIssueName": "任天堂"},
 			map[string]interface{}{"sCLMID": "CLMIssueMstKabu", "sIssueCode": "9984", "sIssueName": "ソフトバンク"},
@@ -61,9 +63,25 @@ func SetupTestClient(t *testing.T) (*TachibanaClientImple, *config.Config) {
 			"sSystemStatus":    "1",
 		},
 		"CLMDateZyouhou": map[string]interface{}{
-			"sCLMID":  "CLMDateZyouhou",
-			"sDayKey": "001",
-			"sTheDay": "20231101",
+			"sCLMID":                "CLMDateZyouhou",
+			"sDayKey":               "001",
+			"sMaeEigyouDay_1":       "20231031",
+			"sMaeEigyouDay_2":       "20231030",
+			"sMaeEigyouDay_3":       "20231027",
+			"sTheDay":               "20231101",
+			"sYokuEigyouDay_1":      "20231102",
+			"sYokuEigyouDay_2":      "20231106",
+			"sYokuEigyouDay_3":      "20231107",
+			"sYokuEigyouDay_4":      "20231108",
+			"sYokuEigyouDay_5":      "20231109",
+			"sYokuEigyouDay_6":      "20231110",
+			"sYokuEigyouDay_7":      "20231113",
+			"sYokuEigyouDay_8":      "20231114",
+			"sYokuEigyouDay_9":      "20231115",
+			"sYokuEigyouDay_10":     "20231116",
+			"sKabuUkewatasiDay":     "20231106",
+			"sKabuKariUkewatasiDay": "20231107", // 追加
+			"sBondUkewatasiDay":     "20231106", // 追加
 		},
 		"CLMYobine": []interface{}{ // 配列に変更
 			// sYobineTaniNumber=101 (当日) の呼値テーブル
@@ -151,13 +169,13 @@ func SetupTestClient(t *testing.T) (*TachibanaClientImple, *config.Config) {
 
 	// モックデータをクライアントに設定
 	client.masterData = masterData
-	client.systemStatus = masterData.SystemStatus
-	client.dateInfo = masterData.DateInfo
-	client.callPriceMap = masterData.CallPriceMap
-	client.issueMap = masterData.IssueMap
-	client.issueMarketMap = masterData.IssueMarketMap
-	client.issueMarketRegulationMap = masterData.IssueMarketRegulationMap
-	client.operationStatusKabuMap = masterData.OperationStatusKabuMap
+	client.masterData.SystemStatus = masterData.SystemStatus
+	client.masterData.DateInfo = masterData.DateInfo
+	client.masterData.CallPriceMap = masterData.CallPriceMap
+	client.masterData.IssueMap = masterData.IssueMap
+	client.masterData.IssueMarketMap = masterData.IssueMarketMap
+	client.masterData.IssueMarketRegulationMap = masterData.IssueMarketRegulationMap
+	client.masterData.OperationStatusKabuMap = masterData.OperationStatusKabuMap
 	client.targetIssueCodes = []string{"7974", "9984"} //実装において、このフィールドを追加するロジックが必要
 
 	return client, cfg
@@ -174,35 +192,35 @@ func (tc *TachibanaClientImple) SetTargetIssueCodesForTest(issueCodes []string) 
 func (tc *TachibanaClientImple) SetCallPriceMapForTest(m map[string]domain.CallPrice) {
 	tc.mu.Lock()
 	defer tc.mu.Unlock()
-	tc.callPriceMap = m
+	tc.masterData.CallPriceMap = m
 }
 
 // SetIssueMarketMapForTest はテスト用に issueMarketMap を設定する関数
 func (tc *TachibanaClientImple) SetIssueMarketMapForTest(m map[string]map[string]domain.IssueMarketMaster) {
 	tc.mu.Lock()
 	defer tc.mu.Unlock()
-	tc.issueMarketMap = m
+	tc.masterData.IssueMarketMap = m
 }
 
 // SetIssueMarketRegulationMapForTest はテスト用に issueMarketRegulationMap を設定する関数
 func (tc *TachibanaClientImple) SetIssueMarketRegulationMapForTest(m map[string]map[string]domain.IssueMarketRegulation) {
 	tc.mu.Lock()
 	defer tc.mu.Unlock()
-	tc.issueMarketRegulationMap = m
+	tc.masterData.IssueMarketRegulationMap = m
 }
 
 // SetIssueMapForTestはテスト用に issueMap を設定する関数
 func (tc *TachibanaClientImple) SetIssueMapForTest(m map[string]domain.IssueMaster) {
 	tc.mu.Lock()
 	defer tc.mu.Unlock()
-	tc.issueMap = m
+	tc.masterData.IssueMap = m
 }
 
 // SetOperationStatusKabuMapForTest はテスト用に operationStatusKabuMap を設定する関数
 func (tc *TachibanaClientImple) SetOperationStatusKabuMapForTest(m map[string]map[string]domain.OperationStatusKabu) {
 	tc.mu.Lock()
 	defer tc.mu.Unlock()
-	tc.operationStatusKabuMap = m
+	tc.masterData.OperationStatusKabuMap = m
 }
 
 // 以下、テスト用の Getter 関数
@@ -288,21 +306,21 @@ func SetExpiryForTest(tc *TachibanaClientImple, t time.Time) {
 func GetSystemStatusForTest(tc *TachibanaClientImple) domain.SystemStatus {
 	tc.mu.RLock()
 	defer tc.mu.RUnlock()
-	return tc.systemStatus
+	return tc.masterData.SystemStatus
 }
 
 // GetDateInfoForTest はテスト用に dateInfo を返す関数
 func GetDateInfoForTest(tc *TachibanaClientImple) domain.DateInfo {
 	tc.mu.RLock()
 	defer tc.mu.RUnlock()
-	return tc.dateInfo
+	return tc.masterData.DateInfo
 }
 
 // SetDateInfoForTest はテスト用に dateInfo を設定する関数
 func SetDateInfoForTest(tc *TachibanaClientImple, dateInfo domain.DateInfo) {
 	tc.mu.Lock()
 	defer tc.mu.Unlock()
-	tc.dateInfo = dateInfo
+	tc.masterData.DateInfo = dateInfo
 }
 
 // GetMasterDataForTest はテスト用に masterData を返す関数
@@ -317,4 +335,28 @@ func SetMasterDataForTest(tc *TachibanaClientImple, masterData *domain.MasterDat
 	tc.mu.Lock()
 	defer tc.mu.Unlock()
 	tc.masterData = masterData
+}
+
+// SetMasterURLForTest はテスト用に masterURL を設定する関数
+func SetMasterURLForTest(tc *TachibanaClientImple, masterURL string) {
+	tc.mu.Lock()
+	defer tc.mu.Unlock()
+	tc.masterURL = masterURL
+}
+
+// SetPriceURLForTest はテスト用に priceURL を設定する関数
+func SetPriceURLForTest(tc *TachibanaClientImple, priceURL string) {
+	tc.mu.Lock()
+	defer tc.mu.Unlock()
+	tc.priceURL = priceURL
+}
+
+// ParseEventForTest はテスト用に EventStream.parseEvent を呼び出すヘルパー関数
+func ParseEventForTest(es *EventStream, message []byte) (*domain.OrderEvent, error) {
+	return es.parseEvent(message)
+}
+
+// SendEventForTest はテスト用に EventStream.sendEvent を呼び出すヘルパー関数
+func SendEventForTest(es *EventStream, event *domain.OrderEvent) {
+	es.sendEvent(event)
 }

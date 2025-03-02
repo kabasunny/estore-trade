@@ -3,6 +3,7 @@ package tachibana_test
 
 import (
 	"context"
+	"estore-trade/internal/domain" // 追加
 	"testing"
 	"time"
 
@@ -36,7 +37,10 @@ func TestTachibanaClientImple_Login_Success(t *testing.T) {
 	}
 	logger, _ := zap.NewDevelopment()
 
-	client := tachibana.NewTachibanaClient(cfg, logger).(*tachibana.TachibanaClientImple)
+	// モックの MasterData を作成
+	mockMasterData := &domain.MasterData{}
+
+	client := tachibana.NewTachibanaClient(cfg, logger, mockMasterData).(*tachibana.TachibanaClientImple) // masterData を渡す
 
 	assert.Equal(t, int64(0), tachibana.GetPNoForTest(client)) // 関数を使用
 
@@ -67,8 +71,11 @@ func TestTachibanaClientImple_Login_Failure(t *testing.T) {
 	}
 	logger, _ := zap.NewDevelopment()
 
-	client := tachibana.NewTachibanaClient(cfg, logger).(*tachibana.TachibanaClientImple)
-	assert.Equal(t, int64(0), tachibana.GetPNoForTest(client)) // 関数を使用
+	// モックの MasterData を作成
+	mockMasterData := &domain.MasterData{}
+
+	client := tachibana.NewTachibanaClient(cfg, logger, mockMasterData).(*tachibana.TachibanaClientImple) // masterDataを渡す
+	assert.Equal(t, int64(0), tachibana.GetPNoForTest(client))                                            // 関数を使用
 
 	err := client.Login(context.Background(), cfg)
 
@@ -89,8 +96,11 @@ func TestTachibanaClientImple_Login_NetworkError(t *testing.T) {
 		TachibanaPassword: "testpassword",
 	}
 	logger, _ := zap.NewDevelopment()
-	client := tachibana.NewTachibanaClient(cfg, logger).(*tachibana.TachibanaClientImple)
-	assert.Equal(t, int64(0), tachibana.GetPNoForTest(client)) // 関数を使用
+	// モックの MasterData を作成
+	mockMasterData := &domain.MasterData{}
+
+	client := tachibana.NewTachibanaClient(cfg, logger, mockMasterData).(*tachibana.TachibanaClientImple) //masterDataを渡す
+	assert.Equal(t, int64(0), tachibana.GetPNoForTest(client))                                            // 関数を使用
 	err := client.Login(context.Background(), cfg)
 	assert.Equal(t, int64(1), tachibana.GetPNoForTest(client))  // 関数を使用
 	assert.Error(t, err)                                        // エラー
@@ -123,8 +133,10 @@ func TestTachibanaClientImple_Login_ExpiredURL(t *testing.T) {
 		TachibanaPassword: "testpassword",
 	}
 	logger, _ := zap.NewDevelopment()
+	// モックの MasterData を作成
+	mockMasterData := &domain.MasterData{}
 
-	client := tachibana.NewTachibanaClient(cfg, logger).(*tachibana.TachibanaClientImple)
+	client := tachibana.NewTachibanaClient(cfg, logger, mockMasterData).(*tachibana.TachibanaClientImple) //masterDataを渡す
 
 	assert.Equal(t, int64(0), tachibana.GetPNoForTest(client)) // 関数を使用
 	err := client.Login(context.Background(), cfg)

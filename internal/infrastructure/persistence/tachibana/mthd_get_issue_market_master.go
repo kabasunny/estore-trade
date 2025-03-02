@@ -17,7 +17,7 @@ func (tc *TachibanaClientImple) GetIssueMarketMaster(issueCode, marketCode strin
 	}
 	tc.targetIssueCodesMu.RUnlock()
 
-	marketMap, ok := tc.issueMarketMap[issueCode]
+	marketMap, ok := tc.masterData.IssueMarketMap[issueCode]
 	if !ok {
 		return domain.IssueMarketMaster{}, false
 	}

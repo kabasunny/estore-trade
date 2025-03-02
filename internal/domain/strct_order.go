@@ -23,5 +23,6 @@ type Order struct {
 	CreatedAt        time.Time `json:"created_at"`         // 注文作成日時
 	UpdatedAt        time.Time `json:"updated_at"`         // 注文最終更新日時
 
-	Condition string `json:"condition"` // 執行条件
+	Condition  string `json:"condition"`   // 執行条件
+	MarketCode string `json:"market_code"` // 市場コード (追加)
 }

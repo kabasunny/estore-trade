@@ -9,24 +9,21 @@ import (
 )
 
 // NewTachibanaClient 関数の定義
-func NewTachibanaClient(cfg *config.Config, logger *zap.Logger) TachibanaClient {
+func NewTachibanaClient(cfg *config.Config, logger *zap.Logger, masterData *domain.MasterData) TachibanaClient {
 	parsedURL, err := url.Parse(cfg.TachibanaBaseURL)
 	if err != nil {
 		logger.Fatal("Invalid Tachibana API base URL", zap.Error(err))
 		return nil
 	}
 	return &TachibanaClientImple{
-		baseURL:                  parsedURL,
-		apiKey:                   cfg.TachibanaAPIKey,
-		secret:                   cfg.TachibanaAPISecret,
-		logger:                   logger,
-		loggined:                 false,
-		pNo:                      0,
-		callPriceMap:             make(map[string]domain.CallPrice),
-		issueMap:                 make(map[string]domain.IssueMaster),
-		issueMarketMap:           make(map[string]map[string]domain.IssueMarketMaster),
-		issueMarketRegulationMap: make(map[string]map[string]domain.IssueMarketRegulation),
-		operationStatusKabuMap:   make(map[string]map[string]domain.OperationStatusKabu),
-		targetIssueCodes:         make([]string, 0),
+		baseURL:          parsedURL,
+		apiKey:           cfg.TachibanaAPIKey,
+		secret:           cfg.TachibanaAPISecret,
+		logger:           logger,
+		loggined:         false,
+		pNo:              0,
+		targetIssueCodes: make([]string, 0),
+		masterData:       masterData, // 引数で受け取った masterData を設定
 	}
+
 }

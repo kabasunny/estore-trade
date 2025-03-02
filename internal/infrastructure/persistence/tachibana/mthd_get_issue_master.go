@@ -31,6 +31,6 @@ func (tc *TachibanaClientImple) GetIssueMaster(issueCode string) (domain.IssueMa
 	}
 	// tc.targetIssueCodesMu.RUnlock() // defer で Unlock されるので不要
 
-	issue, ok := tc.issueMap[issueCode]
+	issue, ok := tc.masterData.IssueMap[issueCode]
 	return issue, ok
 }

@@ -22,7 +22,11 @@ func (es *EventStream) Start() error {
 		return fmt.Errorf("failed to login for event stream: %w", err)
 	}
 
-	eventURL, _ := es.tachibanaClient.GetEventURL()
+	eventURL, err := es.tachibanaClient.GetEventURL() // GetEventURL はエラーを返す可能性がある
+	if err != nil {
+		es.logger.Error("Failed to get event URL", zap.Error(err))
+		return fmt.Errorf("failed to get event URL: %w", err)
+	}
 
 	// EVENT I/F へのリクエストURL作成
 	eventURL = fmt.Sprintf("%s?p_rid=%s&p_board_no=%s&p_eno=0&p_evt_cmd=%s",
@@ -35,6 +39,7 @@ func (es *EventStream) Start() error {
 		return fmt.Errorf("failed to create event stream request: %w", err)
 	}
 
+	es.logger.Info("Starting EventStream loop") // ループ開始時
 	// メッセージ受信ループ (ゴルーチンで実行)
 	for {
 		select {
@@ -42,6 +47,7 @@ func (es *EventStream) Start() error {
 			es.logger.Info("Stopping EventStream")
 			return nil
 		default:
+			es.logger.Info("Sending request...") // リクエスト送信前
 			// ポーリングリクエスト送信
 			resp, err := es.conn.Do(es.req) // HTTPリクエスト送信
 			if err != nil {
@@ -50,11 +56,14 @@ func (es *EventStream) Start() error {
 				// リトライ処理 (例: 少し待ってから再接続)
 				select {
 				case <-time.After(5 * time.Second): // 5秒待機
+					es.logger.Info("Retrying after 5 seconds...") // リトライ前
 					continue
 				case <-es.stopCh:
 					return nil // 停止指示があれば終了
 				}
 			}
+			es.logger.Info("Response received", zap.Int("status_code", resp.StatusCode)) // レスポンス受信後
+
 			// 正常なレスポンスの場合
 			if resp.StatusCode == http.StatusOK {
 				// レスポンスボディの読み込み
@@ -78,11 +87,13 @@ func (es *EventStream) Start() error {
 					// usecase層への通知 (sendEvent メソッドを呼び出す)
 					es.sendEvent(event)
 				}
+				time.Sleep(100 * time.Millisecond) //
 			} else {
 				// HTTPエラーの場合
 				resp.Body.Close()
 				es.logger.Error("Event stream returned non-200 status code", zap.Int("status_code", resp.StatusCode))
 				// エラーに応じた処理 (例: リトライ、エラー通知など)
+				// 今回は、エラーをログ出力するだけで、リトライや停止は行わない
 			}
 		}
 	}

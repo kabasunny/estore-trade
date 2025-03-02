@@ -7,7 +7,7 @@ func (tc *TachibanaClientImple) GetOperationStatusKabu(listedMarket string, unit
 	tc.mu.RLock()
 	defer tc.mu.RUnlock()
 
-	marketMap, ok := tc.operationStatusKabuMap[listedMarket]
+	marketMap, ok := tc.masterData.OperationStatusKabuMap[listedMarket]
 	if !ok {
 		return domain.OperationStatusKabu{}, false
 	}

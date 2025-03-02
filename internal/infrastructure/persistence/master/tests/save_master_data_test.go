@@ -1,5 +1,5 @@
 // internal/infrastructure/persistence/master/tests/save_master_data_test.go
-package master
+package master_test
 
 import (
 	"context"

@@ -23,7 +23,7 @@ func TestTachibanaClientImple_GetCallPrice(t *testing.T) {
 	t.Run("Success", func(t *testing.T) {
 		callPrice, ok := client.GetCallPrice("101")
 		assert.True(t, ok)
-		assert.Equal(t, 101, callPrice.UnitNumber)
+		assert.Equal(t, "101", callPrice.UnitNumber)
 		assert.Equal(t, 3000.0, callPrice.Price1)
 		assert.Equal(t, 1.0, callPrice.UnitPrice1)
 	})

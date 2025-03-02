@@ -1,5 +1,5 @@
 // internal/infrastructure/persistence/master/tests/get_all_issue_codes_test.go
-package master
+package master_test
 
 import (
 	"context"

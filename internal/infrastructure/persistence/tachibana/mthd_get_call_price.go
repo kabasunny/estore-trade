@@ -7,6 +7,10 @@ import "estore-trade/internal/domain"
 func (tc *TachibanaClientImple) GetCallPrice(unitNumber string) (domain.CallPrice, bool) {
 	tc.mu.RLock() // Read Lock を取得
 	defer tc.mu.RUnlock()
-	callPrice, ok := tc.callPriceMap[unitNumber]
+
+	if tc.masterData == nil { // masterData が nil の場合は、データがないことを示す
+		return domain.CallPrice{}, false
+	}
+	callPrice, ok := tc.masterData.CallPriceMap[unitNumber] // masterData 経由でアクセス
 	return callPrice, ok
 }
