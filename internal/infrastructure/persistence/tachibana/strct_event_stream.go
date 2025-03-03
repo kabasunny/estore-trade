@@ -16,5 +16,4 @@ type EventStream struct {
 	stopCh          chan struct{}            // 停止シグナル用チャネル
 	conn            *http.Client             // HTTPクライアント(長時間のポーリングに使用)
 	req             *http.Request            // HTTPリクエスト
-
 }

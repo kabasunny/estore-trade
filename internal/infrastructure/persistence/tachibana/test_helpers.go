@@ -35,6 +35,20 @@ func SetupTestClient(t *testing.T) (*TachibanaClientImple, *config.Config) {
 
 	client := NewTachibanaClient(cfg, logger, mockMasterData).(*TachibanaClientImple) // masterData を渡す
 
+	// LoginをMockする（RequestURLなどを設定するため)
+	loginMockResponse := `{
+        "sResultCode": "0",
+        "sUrlRequest": "https://example.com/request",
+        "sUrlMaster": "https://example.com/master",
+        "sUrlPrice": "https://example.com/price",
+        "sUrlEvent": "https://example.com/event",
+        "p_no": "12345"
+        }`
+	httpmock.RegisterResponder("POST", "https://example.com/login",
+		httpmock.NewStringResponder(200, loginMockResponse))
+
+	client.Login(context.Background(), cfg) // Login を実行して RequestURL などを設定
+
 	// DownloadMasterData メソッドのモック (より完全なデータ、API 仕様に準拠)
 	//必要なデータのみ追加 + CallPrice関連の値追加
 	mockMasterResponse := map[string]interface{}{
@@ -139,20 +153,6 @@ func SetupTestClient(t *testing.T) (*TachibanaClientImple, *config.Config) {
 	httpmock.RegisterResponder("POST", "https://example.com/master", // MasterURL
 		httpmock.NewJsonResponderOrPanic(200, mockMasterResponse),
 	)
-
-	// LoginをMockする（RequestURLなどを設定するため)
-	loginMockResponse := `{
-        "sResultCode": "0",
-        "sUrlRequest": "https://example.com/request",
-        "sUrlMaster": "https://example.com/master",
-        "sUrlPrice": "https://example.com/price",
-        "sUrlEvent": "https://example.com/event",
-        "p_no": "12345"
-        }`
-	httpmock.RegisterResponder("POST", "https://example.com/login",
-		httpmock.NewStringResponder(200, loginMockResponse))
-
-	client.Login(context.Background(), cfg) // Login を実行して RequestURL などを設定
 
 	// DownloadMasterData のモックの代わりに、モックデータを直接設定
 	masterData := &domain.MasterData{
@@ -365,4 +365,14 @@ func SendEventForTest(es *EventStream, event *domain.OrderEvent) {
 // ProcessResponseBodyForTest はテスト用に EventStream.processResponseBodyを呼び出す
 func ProcessResponseBodyForTest(es *EventStream, resp *http.Response) error {
 	return es.processResponseBody(resp)
+}
+
+// GetEventStreamLogger はテスト用に EventStream の logger を返す関数
+func GetEventStreamLogger(es *EventStream) *zap.Logger {
+	return es.logger
+}
+
+// SetEventStreamLogger はテスト用に EventStream の logger を設定する関数
+func SetEventStreamLogger(es *EventStream, logger *zap.Logger) {
+	es.logger = logger
 }
