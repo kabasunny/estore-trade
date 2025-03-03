@@ -55,13 +55,13 @@ func processResponse(response map[string]interface{}, m *domain.MasterData, tc *
 				switch sCLMID {
 				case "CLMYobine":
 					var callPrice domain.CallPrice
-					fmt.Printf("itemMap: %v\n", itemMap)
+					// fmt.Printf("itemMap: %v\n", itemMap)
 
 					if err := mapToStruct(itemMap, &callPrice); err != nil {
 						return fmt.Errorf("failed to map CallPrice: %w", err)
 					}
 					m.CallPriceMap[callPrice.UnitNumber] = callPrice
-					fmt.Printf("callPrice: %v\n", callPrice)
+					// fmt.Printf("callPrice: %v\n", callPrice)
 				case "CLMIssueMstKabu":
 					var issueMaster domain.IssueMaster
 					if err := mapToStruct(itemMap, &issueMaster); err != nil {

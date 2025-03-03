@@ -1,9 +1,10 @@
+// internal/infrastructure/persistence/tachibana/mthd_start_event_stream.go
+
 package tachibana
 
 import (
 	"context"
 	"fmt"
-	"io"
 	"net/http"
 	"time"
 
@@ -15,20 +16,14 @@ func (es *EventStream) Start() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// ログインして仮想URLを取得 (tachibanaClient.Login はセッション管理を行うように修正済み)
-	startTime := time.Now()
-	err := es.tachibanaClient.Login(ctx, es.config) // (1) ログイン
-	loginDuration := time.Since(startTime)
-	es.logger.Info("Login 完了", zap.Duration("duration", loginDuration), zap.Error(err)) // Login の処理時間をログ出力
+	// ログインして仮想URLを取得
+	err := es.tachibanaClient.Login(ctx, es.config)
 	if err != nil {
 		es.logger.Error("Failed to login for event stream", zap.Error(err))
 		return fmt.Errorf("failed to login for event stream: %w", err)
 	}
 
-	startTime = time.Now()
-	eventURL, err := es.tachibanaClient.GetEventURL() // (2) イベント URL の取得
-	getUrlDuration := time.Since(startTime)
-	es.logger.Info("GetEventURL 完了", zap.Duration("duration", getUrlDuration), zap.Error(err)) // GetEventURL の処理時間をログ出力
+	eventURL, err := es.tachibanaClient.GetEventURL()
 	if err != nil {
 		es.logger.Error("Failed to get event URL", zap.Error(err))
 		return fmt.Errorf("failed to get event URL: %w", err)
@@ -39,71 +34,66 @@ func (es *EventStream) Start() error {
 		eventURL, es.config.EventRid, es.config.EventBoardNo, es.config.EventEvtCmd)
 
 	// HTTP GET リクエスト (Long Polling) 初回のみ
-	startTime = time.Now()
-	es.req, err = http.NewRequestWithContext(ctx, http.MethodGet, eventURL, nil) // (3) リクエストの作成
-	reqDuration := time.Since(startTime)
-	es.logger.Info("CreateRequest 完了", zap.Duration("duration", reqDuration), zap.Error(err)) // CreateRequest の処理時間をログ出力
+	es.req, err = http.NewRequestWithContext(ctx, http.MethodGet, eventURL, nil)
 	if err != nil {
 		es.logger.Error("Failed to create event stream request", zap.Error(err))
 		return fmt.Errorf("failed to create event stream request: %w", err)
 	}
 
-	es.logger.Info("Starting EventStream loop") // ループ開始時
-	// メッセージ受信ループ (ゴルーチンで実行)
-	for {
+	es.logger.Info("Starting EventStream loop")
+
+	// リトライ設定
+	maxRetries := 3
+	retryDelay := 2 * time.Second // テストしやすいように、設定可能にすることも検討
+
+	for attempt := 0; attempt < maxRetries; attempt++ {
 		select {
-		case <-es.stopCh: // 停止シグナルを受け取ったら終了
+		case <-es.stopCh: // 停止シグナル
 			es.logger.Info("Stopping EventStream")
 			return nil
 		default:
-			es.logger.Info("Sending request...") // リクエスト送信前
-			// ポーリングリクエスト送信
-			resp, err := es.conn.Do(es.req) // HTTPリクエスト送信
+			es.logger.Info("Sending request...", zap.Int("attempt", attempt+1))
+			resp, err := es.conn.Do(es.req)
 			if err != nil {
-				// ネットワークエラーやタイムアウトなど
-				es.logger.Error("Event stream request failed", zap.Error(err))
-				// リトライ処理 (例: 少し待ってから再接続)
+				es.logger.Error("Event stream request failed", zap.Error(err), zap.Int("attempt", attempt+1))
+				if attempt == maxRetries-1 {
+					return fmt.Errorf("failed to connect to event stream after %d attempts: %w", maxRetries, err)
+				}
 				select {
-				case <-time.After(5 * time.Second): // 5秒待機
-					es.logger.Info("Retrying after 5 seconds...") // リトライ前
+				case <-time.After(retryDelay):
+					es.logger.Info("Retrying...", zap.Int("attempt", attempt+1))
 					continue
 				case <-es.stopCh:
-					return nil // 停止指示があれば終了
+					return nil
 				}
 			}
-			es.logger.Info("Response received", zap.Int("status_code", resp.StatusCode)) // レスポンス受信後
 
-			// 正常なレスポンスの場合
+			es.logger.Info("Response received", zap.Int("status_code", resp.StatusCode))
+
 			if resp.StatusCode == http.StatusOK {
-				// レスポンスボディの読み込み
-				body, err := io.ReadAll(resp.Body) // io.ReadAll を使用
-				resp.Body.Close()                  // Closeは必ず行う
-
+				// レスポンスボディの処理
+				err = es.processResponseBody(resp) // respをそのまま渡す
 				if err != nil {
-					es.logger.Error("Failed to read event stream response", zap.Error(err))
-					continue // 読み込み失敗時は次のループへ
+					// クローズはprocessResponseBody内
+					return fmt.Errorf("failed to process response body: %w", err)
 				}
-				// 受信データが空でなければ処理
-				receivedData := string(body) // string型に変換
-				if receivedData != "" {
-					es.logger.Info("Received event stream message", zap.String("message", receivedData))
-					// メッセージのパース処理 (parseEvent メソッドを呼び出す)
-					event, err := es.parseEvent(body) // []byteを渡す
-					if err != nil {
-						es.logger.Error("Failed to parse event stream message", zap.Error(err))
-						continue
-					}
-					// usecase層への通知 (sendEvent メソッドを呼び出す)
-					es.sendEvent(event)
-				}
-				time.Sleep(1000 * time.Millisecond) //
+				// クローズはprocessResponseBody内
+				return nil // 正常終了
 			} else {
-				// HTTPエラーの場合
 				resp.Body.Close()
-				es.logger.Error("Event stream returned non-200 status code", zap.Int("status_code", resp.StatusCode))
-				// エラーに応じた処理 (例: リトライ、エラー通知など)
-				// 今回は、エラーをログ出力するだけで、リトライや停止は行わない
+				es.logger.Error("Event stream returned non-200 status code", zap.Int("status_code", resp.StatusCode), zap.Int("attempt", attempt+1))
+				if attempt == maxRetries-1 {
+					return fmt.Errorf("failed to connect to event stream after %d attempts, status code: %d", maxRetries, resp.StatusCode)
+				}
+				select {
+				case <-time.After(retryDelay):
+					es.logger.Info("Retrying...", zap.Int("attempt", attempt+1))
+					continue
+				case <-es.stopCh:
+					return nil
+				}
 			}
 		}
 	}
+	return nil // ここには到達しないはず (リトライ回数超過でエラーを返すため)
 }

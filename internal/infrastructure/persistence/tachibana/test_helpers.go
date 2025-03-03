@@ -1,8 +1,9 @@
-// internal/infrastructure/persistence/tachibana/test_helper.go
+// internal/infrastructure/persistence/tachibana/test_helpers.go
 package tachibana
 
 import (
 	"context"
+	"net/http"
 	"testing"
 	"time"
 
@@ -359,4 +360,9 @@ func ParseEventForTest(es *EventStream, message []byte) (*domain.OrderEvent, err
 // SendEventForTest はテスト用に EventStream.sendEvent を呼び出すヘルパー関数
 func SendEventForTest(es *EventStream, event *domain.OrderEvent) {
 	es.sendEvent(event)
+}
+
+// ProcessResponseBodyForTest はテスト用に EventStream.processResponseBodyを呼び出す
+func ProcessResponseBodyForTest(es *EventStream, resp *http.Response) error {
+	return es.processResponseBody(resp)
 }
