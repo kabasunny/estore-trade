@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-// GetOrderStatus は注文のステータスを取得します。
+// GetOrderStatus は注文のステータスを取得
 func (tc *TachibanaClientImple) GetOrderStatus(ctx context.Context, orderID string) (*domain.Order, error) {
 	payload := map[string]string{
 		"sCLMID":       clmidOrderListDetail,
