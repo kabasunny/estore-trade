@@ -28,8 +28,14 @@ func RunBatch(app *app.App) error {
 		return fmt.Errorf("failed to get all issue codes: %w", err)
 	}
 
+	// GetMarketData を呼び出して、必要なデータを取得
+	marketData, err := ranking.GetMarketData(ctx, app.TachibanaClient, allIssueCodes)
+	if err != nil {
+		return fmt.Errorf("failed to get market data: %w", err)
+	}
+
 	// 3. 売買代金ランキング計算
-	rank, err := ranking.CalculateRanking(ctx, app.TachibanaClient, allIssueCodes)
+	rank, err := ranking.CalculateRanking(ctx, marketData) //tachibanaClientを削除
 	if err != nil {
 		return fmt.Errorf("failed to calculate ranking: %w", err)
 	}

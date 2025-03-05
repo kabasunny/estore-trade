@@ -2,7 +2,7 @@ package ranking
 
 import (
 	"database/sql"
-	"estore-trade/internal/domain" // 追加
+	"estore-trade/internal/domain"
 )
 
 func NewRankingRepository(db *sql.DB) domain.RankingRepository { // 戻り値を interface に変更
