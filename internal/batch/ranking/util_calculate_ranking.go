@@ -11,7 +11,7 @@ import (
 )
 
 // CalculateRanking は売買代金ランキングを計算し、上位N件の銘柄リストを返す
-func CalculateRanking(ctx context.Context, marketData []marketDataItem) ([]domain.Ranking, error) { //tachibanaClientを削除
+func CalculateRanking(ctx context.Context, marketData []MarketDataItem) ([]domain.Ranking, error) { //tachibanaClientを削除
 	// 3. 売買代金の計算とランキング作成
 	var ranking []domain.Ranking
 	for _, data := range marketData {
