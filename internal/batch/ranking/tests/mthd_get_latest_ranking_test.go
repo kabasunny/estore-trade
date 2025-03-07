@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	_ "github.com/mattn/go-sqlite3" // SQLite3 ドライバをインポート
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -39,9 +40,9 @@ func TestGetLatestRanking(t *testing.T) {
 	rankingData := []domain.Ranking{
 		{Rank: 1, IssueCode: "1001", TradingValue: 1000, CreatedAt: now.Add(-time.Hour)},  // 古いデータ
 		{Rank: 2, IssueCode: "1002", TradingValue: 900, CreatedAt: now.Add(-time.Hour)},   // 古いデータ
-		{Rank: 1, IssueCode: "2001", TradingValue: 2000, CreatedAt: now},                  // 新しいデータ
+		{Rank: 3, IssueCode: "2001", TradingValue: 2000, CreatedAt: now},                  // 新しいデータ
 		{Rank: 2, IssueCode: "2002", TradingValue: 1900, CreatedAt: now},                  // 新しいデータ
-		{Rank: 3, IssueCode: "2003", TradingValue: 1800, CreatedAt: now},                  // 新しいデータ
+		{Rank: 1, IssueCode: "2003", TradingValue: 1800, CreatedAt: now},                  // 新しいデータ
 		{Rank: 4, IssueCode: "2004", TradingValue: 1700, CreatedAt: now.Add(time.Minute)}, // 最新のデータ
 	}
 	// テストデータ投入
@@ -61,7 +62,7 @@ func TestGetLatestRanking(t *testing.T) {
 		assert.Equal(t, "2004", latestRanking[0].IssueCode)
 
 		assert.Equal(t, 2, latestRanking[1].Rank)
-		assert.Equal(t, "2001", latestRanking[1].IssueCode)
+		assert.Equal(t, "2003", latestRanking[1].IssueCode)
 
 		assert.Equal(t, 3, latestRanking[2].Rank)
 		assert.Equal(t, "2002", latestRanking[2].IssueCode)

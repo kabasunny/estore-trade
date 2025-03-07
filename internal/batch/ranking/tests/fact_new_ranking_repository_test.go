@@ -6,6 +6,7 @@ import (
 	"estore-trade/internal/domain"
 	"testing"
 
+	_ "github.com/mattn/go-sqlite3" // SQLite3 ドライバをインポート
 	"github.com/stretchr/testify/assert"
 )
 
