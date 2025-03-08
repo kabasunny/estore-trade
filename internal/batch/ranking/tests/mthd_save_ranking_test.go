@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	_ "github.com/mattn/go-sqlite3" // SQLite3 ドライバをインポート
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

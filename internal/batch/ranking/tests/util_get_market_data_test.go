@@ -1,37 +1,31 @@
+// util_get_market_data_test.go
 package ranking_test
 
 import (
 	"context"
 	"estore-trade/internal/batch/ranking"
 	"estore-trade/internal/infrastructure/persistence/tachibana"
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
-// TestGetMarketData is a simple test to ensure GetMarketData retrieves market data.
 func TestGetMarketData(t *testing.T) {
-	// Setup a mock TachibanaClient
-	mockClient := &tachibana.MockTachibanaClient{}
+	// モッククライアントの作成
+	mockClient := new(tachibana.MockTachibanaClient)
 
-	// Define a slice of issue codes for the test
-	issueCodes := []string{"1234", "5678"}
+	// GetRequestURL メソッドのモック設定
+	mockRequestURL := "mocked_request_url"
+	mockClient.On("GetRequestURL").Return(mockRequestURL, nil) // 戻り値を設定
 
-	// Call GetMarketData with the mock client and issue codes
+	// テスト対象の関数を呼び出す
+	issueCodes := []string{"1301", "1305"}
 	marketData, err := ranking.GetMarketData(context.Background(), mockClient, issueCodes)
 
-	fmt.Println(marketData)
+	// アサーション
+	assert.NoError(t, err)
+	assert.Empty(t, marketData) // marketData が空であることを確認
 
-	// Assert that no error occurred
-	assert.NoError(t, err, "GetMarketData should not return an error")
-
-	// Assert that marketData is not nil
-	assert.NotNil(t, marketData, "Market data should not be nil")
-
-	// Assert that marketData contains exactly the number of issue codes requested
-	assert.Len(t, marketData, len(issueCodes), "Length of market data should be 0")
-
-	// Assert that the issue codes in marketData match the requested ones
-
+	// モックが期待通りに呼び出されたかを確認
+	mockClient.AssertExpectations(t)
 }

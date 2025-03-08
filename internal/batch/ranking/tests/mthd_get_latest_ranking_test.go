@@ -57,15 +57,18 @@ func TestGetLatestRanking(t *testing.T) {
 		// 取得した件数が正しいか
 		assert.Len(t, latestRanking, 3)
 
-		// 最新のランキングが取得できているか (順位と銘柄コードで確認)
-		assert.Equal(t, 1, latestRanking[0].Rank)
+		// 最新のランキングが取得できているか (created_at と rank の両方で確認)
+
+		// 1番目は created_at が最も新しい "2004"
 		assert.Equal(t, "2004", latestRanking[0].IssueCode)
+		assert.Equal(t, 4, latestRanking[0].Rank)
 
-		assert.Equal(t, 2, latestRanking[1].Rank)
+		// 2番目と3番目は created_at が同じ (now)。rank で順序が決まる。
 		assert.Equal(t, "2003", latestRanking[1].IssueCode)
+		assert.Equal(t, 1, latestRanking[1].Rank)
 
-		assert.Equal(t, 3, latestRanking[2].Rank)
 		assert.Equal(t, "2002", latestRanking[2].IssueCode)
+		assert.Equal(t, 2, latestRanking[2].Rank)
 	})
 
 	t.Run("Get latest ranking with limit 0", func(t *testing.T) {
