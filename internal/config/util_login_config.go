@@ -35,20 +35,18 @@ func LoadConfig(envPath string) (*Config, error) {
 		}
 	}
 	return &Config{
-		TachibanaAPIKey:    os.Getenv("TACHIBANA_API_KEY"),
-		TachibanaAPISecret: os.Getenv("TACHIBANA_API_SECRET"),
-		TachibanaBaseURL:   os.Getenv("TACHIBANA_BASE_URL"),
-		TachibanaUserID:    os.Getenv("TACHIBANA_USER_ID"),
-		TachibanaPassword:  os.Getenv("TACHIBANA_PASSWORD"),
-		DBHost:             os.Getenv("DB_HOST"),
-		DBPort:             dbPort,
-		DBUser:             os.Getenv("DB_USER"),
-		DBPassword:         os.Getenv("DB_PASSWORD"),
-		DBName:             os.Getenv("DB_NAME"),
-		LogLevel:           os.Getenv("LOG_LEVEL"),
-		EventRid:           os.Getenv("EVENT_RID"),
-		EventBoardNo:       os.Getenv("EVENT_BOARD_NO"),
-		EventEvtCmd:        os.Getenv("EVENT_EVT_CMD"),
-		HTTPPort:           httpPort, //HTTPPort
+		TachibanaBaseURL:  os.Getenv("TACHIBANA_BASE_URL"),
+		TachibanaUserID:   os.Getenv("TACHIBANA_USER_ID"),
+		TachibanaPassword: os.Getenv("TACHIBANA_PASSWORD"),
+		DBHost:            os.Getenv("DB_HOST"),
+		DBPort:            dbPort,
+		DBUser:            os.Getenv("DB_USER"),
+		DBPassword:        os.Getenv("DB_PASSWORD"),
+		DBName:            os.Getenv("DB_NAME"),
+		LogLevel:          os.Getenv("LOG_LEVEL"),
+		EventRid:          os.Getenv("EVENT_RID"),
+		EventBoardNo:      os.Getenv("EVENT_BOARD_NO"),
+		EventEvtCmd:       os.Getenv("EVENT_EVT_CMD"),
+		HTTPPort:          httpPort, //HTTPPort
 	}, nil
 }

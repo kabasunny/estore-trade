@@ -17,8 +17,6 @@ func NewTachibanaClient(cfg *config.Config, logger *zap.Logger, masterData *doma
 	}
 	return &TachibanaClientImple{
 		baseURL:          parsedURL,
-		apiKey:           cfg.TachibanaAPIKey,
-		secret:           cfg.TachibanaAPISecret,
 		logger:           logger,
 		loggined:         false,
 		pNo:              0,
