@@ -2,7 +2,6 @@ package tachibana
 
 import (
 	"fmt"
-	"io"
 	"math"
 	"net/http"
 	"time"
@@ -10,11 +9,11 @@ import (
 
 // retryDo は、HTTP リクエストをリトライ付きで実行する
 func retryDo(
-	retryFunc func(*http.Client, func(io.Reader, interface{}) error) (*http.Response, error),
+	retryFunc func(*http.Client, func([]byte, interface{}) error) (*http.Response, error), // decodeFuncの型修正
 	maxRetries int,
 	initialBackoff time.Duration,
 	client *http.Client, // http.Client を引数で渡す
-	decodeFunc func(io.Reader, interface{}) error, // デコード関数を引数で渡す
+	decodeFunc func([]byte, interface{}) error, // デコード関数を引数で渡す []byteに変更
 ) (*http.Response, error) {
 	var resp *http.Response
 	var err error

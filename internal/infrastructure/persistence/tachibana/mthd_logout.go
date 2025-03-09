@@ -2,11 +2,12 @@
 package tachibana
 
 import (
-	"bytes"
+	//"bytes" // 不要
 	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url" // 追加
 	"time"
 
 	"go.uber.org/zap"
@@ -24,8 +25,9 @@ func (tc *TachibanaClientImple) Logout(ctx context.Context) error {
 
 	payload := map[string]string{
 		"sCLMID":    clmidLogoutRequest,
-		"p_no":      tc.getPNo(),
+		"p_no":      tc.getPNo(), // 呼び出し元でインクリメントするため、ここでは取得
 		"p_sd_date": formatSDDate(time.Now()),
+		"sJsonOfmt": "4",
 	}
 
 	payloadJSON, err := json.Marshal(payload)
@@ -34,13 +36,17 @@ func (tc *TachibanaClientImple) Logout(ctx context.Context) error {
 		return fmt.Errorf("ログアウトペイロードのJSONエンコードに失敗しました: %w", err)
 	}
 
+	// URLエンコード (GETリクエスト)
+	encodedPayload := url.QueryEscape(string(payloadJSON))
+	requestURL := tc.requestURL + "?" + encodedPayload
+
 	// requestURL をそのまま使用.  認証のURL(/auth/)ではなく、通常の取引で使うURLを使う
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, tc.requestURL, bytes.NewBuffer(payloadJSON))
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, requestURL, nil) // GET, bodyはnil
 	if err != nil {
 		tc.logger.Error("ログアウトリクエストの作成に失敗しました", zap.Error(err))
 		return fmt.Errorf("ログアウトリクエストの作成に失敗しました: %w", err)
 	}
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Type", "application/json") // 一応残しておく
 
 	req, cancel := withContextAndTimeout(req, 60*time.Second)
 	defer cancel()
@@ -50,7 +56,10 @@ func (tc *TachibanaClientImple) Logout(ctx context.Context) error {
 		return fmt.Errorf("ログアウトに失敗しました: %w", err)
 	}
 
-	if resultCode, ok := response["sResultCode"].(string); ok && resultCode != "0" {
+	if resultCode, ok := response["sResultCode"].(string); !ok {
+		// sResultCode が存在しない場合
+		return fmt.Errorf("API error: sResultCode not found in response")
+	} else if resultCode != "0" {
 		// 警告コードがある場合もログに出力 (PlaceOrder, GetOrderStatus に倣う)
 		warnCode, _ := response["sWarningCode"].(string)
 		warnText, _ := response["sWarningText"].(string)
