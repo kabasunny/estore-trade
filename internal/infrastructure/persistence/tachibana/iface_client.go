@@ -8,6 +8,8 @@ import (
 
 type TachibanaClient interface {
 	Login(ctx context.Context, cfg interface{}) error
+	Logout(ctx context.Context) error
+
 	PlaceOrder(ctx context.Context, order *domain.Order) (*domain.Order, error)
 	GetOrderStatus(ctx context.Context, orderID string) (*domain.Order, error)
 	CancelOrder(ctx context.Context, orderID string) error

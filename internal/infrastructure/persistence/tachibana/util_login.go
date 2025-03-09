@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -24,14 +25,21 @@ func login(ctx context.Context, tc *TachibanaClientImple, userID, password strin
 
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
-		tc.logger.Error("Failed to marshal login payload", zap.Error(err))
-		return false, fmt.Errorf("failed to marshal login payload: %w", err)
+		tc.logger.Error("ログインペイロードのJSONエンコードに失敗しました", zap.Error(err))
+		return false, fmt.Errorf("ログインペイロードのJSONエンコードに失敗しました: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, tc.baseURL.String()+"login", bytes.NewBuffer(payloadJSON)) //BaseURL使用
+	// URLを組み立て
+	authURL, err := url.JoinPath(tc.baseURL.String(), "auth/") //baseURLにauth/を付け足す
 	if err != nil {
-		tc.logger.Error("Failed to create login request", zap.Error(err))
-		return false, fmt.Errorf("failed to create login request: %w", err)
+		tc.logger.Error("認証URLの生成に失敗", zap.Error(err))
+		return false, fmt.Errorf("認証URLの生成に失敗しました: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, authURL, bytes.NewBuffer(payloadJSON))
+	if err != nil {
+		tc.logger.Error("ログインリクエストの作成に失敗しました", zap.Error(err))
+		return false, fmt.Errorf("ログインリクエストの作成に失敗しました: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req, cancel := withContextAndTimeout(req, 60*time.Second)
@@ -39,33 +47,33 @@ func login(ctx context.Context, tc *TachibanaClientImple, userID, password strin
 
 	response, err := sendRequest(req, 3)
 	if err != nil {
-		return false, fmt.Errorf("login failed: %w", err)
+		return false, fmt.Errorf("ログインに失敗しました: %w", err)
 	}
 
-	if response["sResultCode"] != "0" {
-		tc.logger.Error("Login API returned an error", zap.String("result_code", response["sResultCode"].(string)), zap.String("result_text", response["sResultText"].(string)))
-		return false, fmt.Errorf("login API returned an error: %s - %s", response["sResultCode"], response["sResultText"])
+	if resultCode, ok := response["sResultCode"].(string); ok && resultCode != "0" {
+		tc.logger.Error("ログインAPIがエラーを返しました", zap.String("result_code", resultCode), zap.String("result_text", response["sResultText"].(string)))
+		return false, fmt.Errorf("ログインAPIエラー: %s - %s", resultCode, response["sResultText"]) // 日本語でエラーを返す
 	}
 
 	requestURL, ok := response["sUrlRequest"]
 	if !ok {
-		tc.logger.Error("sUrlRequest not found in login response")
-		return false, fmt.Errorf("sUrlRequest not found in login response")
+		tc.logger.Error("レスポンスにsUrlRequestが含まれていません")
+		return false, fmt.Errorf("レスポンスにsUrlRequestが含まれていません")
 	}
 	masterURL, ok := response["sUrlMaster"]
 	if !ok {
-		tc.logger.Error("sUrlMaster not found in login response")
-		return false, fmt.Errorf("sUrlMaster not found in login response")
+		tc.logger.Error("レスポンスにsUrlMasterが含まれていません")
+		return false, fmt.Errorf("レスポンスにsUrlMasterが含まれていません")
 	}
 	priceURL, ok := response["sUrlPrice"]
 	if !ok {
-		tc.logger.Error("sUrlPrice not found in login response")
-		return false, fmt.Errorf("sUrlPrice not found in login response")
+		tc.logger.Error("レスポンスにsUrlPriceが含まれていません")
+		return false, fmt.Errorf("レスポンスにsUrlPriceが含まれていません")
 	}
 	eventURL, ok := response["sUrlEvent"]
 	if !ok {
-		tc.logger.Error("sUrlEvent not found in login response")
-		return false, fmt.Errorf("sUrlEvent not found in login response")
+		tc.logger.Error("レスポンスにsUrlEventが含まれていません")
+		return false, fmt.Errorf("レスポンスにsUrlEventが含まれていません")
 	}
 
 	// p_no はLogin APIのレスポンスで上書き
@@ -73,17 +81,17 @@ func login(ctx context.Context, tc *TachibanaClientImple, userID, password strin
 		if pNo, err := strconv.ParseInt(pNoStr, 10, 64); err == nil {
 			tc.pNo = pNo
 		} else {
-			tc.logger.Warn("Failed to parse p_no", zap.String("p_no", pNoStr), zap.Error(err))
+			tc.logger.Warn("p_noのパースに失敗しました", zap.String("p_no", pNoStr), zap.Error(err))
 		}
 	} else {
-		tc.logger.Warn("p_no not found or not a string in login response", zap.Any("response", response))
+		tc.logger.Warn("レスポンスにp_noが含まれていないか、文字列ではありません", zap.Any("response", response))
 	}
 
 	tc.requestURL = requestURL.(string)
 	tc.masterURL = masterURL.(string)
 	tc.priceURL = priceURL.(string)
 	tc.eventURL = eventURL.(string)
-	tc.expiry = time.Now().Add(1 * time.Hour)
+	tc.expiry = time.Now().Add(2 * time.Hour)
 	tc.loggined = true
 
 	return true, nil

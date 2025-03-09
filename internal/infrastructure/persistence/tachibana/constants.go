@@ -18,4 +18,6 @@ const (
 	clmidCancelOrder        = "CLMKabuCancelOrder" //注文キャンセル
 
 	clmFdsGetMarketPrice = "CLMMfdsGetMarketPrice" //時価情報
+	clmidLogoutRequest   = "CLMAuthLogoutRequest"  // Logout リクエストの sCLMID
+
 )

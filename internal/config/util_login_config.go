@@ -12,7 +12,6 @@ import (
 func LoadConfig(envPath string) (*Config, error) {
 	err := godotenv.Load(envPath)
 	if err != nil {
-		// .envファイルが見つからない場合にエラーメッセージを表示
 		fmt.Printf(".envファイルが見つかりませんでした: %v\n", err)
 		//return nil, err // .env が見つからなくても、環境変数が設定されていれば続行
 	}

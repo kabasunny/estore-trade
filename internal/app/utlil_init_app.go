@@ -13,7 +13,7 @@ import (
 	"estore-trade/internal/infrastructure/database/postgres"
 	"estore-trade/internal/infrastructure/logger/zapLogger"
 	"estore-trade/internal/infrastructure/persistence/account"
-	"estore-trade/internal/infrastructure/persistence/master" // 追加
+	"estore-trade/internal/infrastructure/persistence/master"
 	"estore-trade/internal/infrastructure/persistence/order"
 	"estore-trade/internal/infrastructure/persistence/tachibana"
 	"estore-trade/internal/usecase"
@@ -38,22 +38,16 @@ func InitApp() (*App, error) {
 	// MasterDataRepository のインスタンスを作成
 	masterDataRepo := master.NewMasterDataRepository(db.DB())
 	// DBからマスタデータを取得
-	// (ここでは仮に空のコンテキストを使用していますが、必要に応じて適切なコンテキストを使用してください)
 	md, err := masterDataRepo.GetMasterData(context.Background())
 	if err != nil {
-		return nil, fmt.Errorf("failed to get master data from DB: %w", err)
+		return nil, fmt.Errorf("DBからマスターデータの取得に失敗: %w", err)
 	}
 
 	// TachibanaClient のインスタンスを作成 (masterData を渡す)
-	tachibanaClient := tachibana.NewTachibanaClient(cfg, logger, md) //mdを追加
+	tachibanaClient := tachibana.NewTachibanaClient(cfg, logger, md)
 	if err := tachibanaClient.Login(context.Background(), cfg); err != nil {
 		return nil, fmt.Errorf("APIログインに失敗: %w", err)
 	}
-	// マスタデータの取得はバッチ処理に移動
-	// if err := tachibanaClient.DownloadMasterData(context.Background()); err != nil {
-	// 	return nil, fmt.Errorf("マスタデータダウンロードに失敗: %w", err)
-	// }
-	// logger.Info("マスタデータのダウンロードに成功")
 
 	orderRepo := order.NewOrderRepository(db.DB())
 	accountRepo := account.NewAccountRepository(db.DB())
@@ -79,7 +73,7 @@ func InitApp() (*App, error) {
 		TachibanaClient:    tachibanaClient,
 		OrderRepo:          orderRepo,
 		AccountRepo:        accountRepo,
-		MasterDataRepo:     masterDataRepo, // 追加
+		MasterDataRepo:     masterDataRepo,
 		TradingUsecase:     tradingUsecase,
 		AutoTradingUsecase: autoTradingUsecase,
 		EventStream:        eventStream,

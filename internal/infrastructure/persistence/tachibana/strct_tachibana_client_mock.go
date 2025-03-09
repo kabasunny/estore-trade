@@ -18,6 +18,12 @@ func (m *MockTachibanaClient) Login(ctx context.Context, cfg interface{}) error 
 	return args.Error(0)
 }
 
+// Logout メソッドのモックを追加
+func (m *MockTachibanaClient) Logout(ctx context.Context) error {
+	args := m.Called(ctx)
+	return args.Error(0)
+}
+
 func (m *MockTachibanaClient) PlaceOrder(ctx context.Context, order *domain.Order) (*domain.Order, error) {
 	args := m.Called(ctx, order)
 	if err := args.Error(1); err != nil { //エラーだったら
