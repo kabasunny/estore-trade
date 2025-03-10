@@ -30,18 +30,18 @@ func sendRequest(req *http.Request, maxRetries int) (map[string]interface{}, err
 		// req.Header.Set("Content-Type", "application/json") // Content-Type を再設定
 
 		// リクエスト内容をログに出力 (デバッグ用)
-		// fmt.Printf("Request URL: %s\n", req.URL.String())
-		// fmt.Printf("Request Method: %s\n", req.Method)
+		fmt.Printf("Request URL: %s\n", req.URL.String())
+		fmt.Printf("Request Method: %s\n", req.Method)
 
 		// リクエストボディをログ出力 (Shift-JIS -> UTF-8 変換)
 		if req.Body != nil {
 			bodyBytes, _ := io.ReadAll(req.Body)
 			req.Body = io.NopCloser(bytes.NewBuffer(bodyBytes)) // 再設定
-			// bodyUTF8, _, err := transform.Bytes(japanese.ShiftJIS.NewDecoder(), bodyBytes)
+			bodyUTF8, _, err := transform.Bytes(japanese.ShiftJIS.NewDecoder(), bodyBytes)
 			if err != nil {
 				fmt.Printf("Request Body Decode Error: %v\n", err)
 			}
-			// fmt.Printf("Request Body (UTF-8): %s\n", string(bodyUTF8))
+			fmt.Printf("Request Body (UTF-8): %s\n", string(bodyUTF8))
 		}
 		// fmt.Printf("Request Headers: %v\n", req.Header)
 
@@ -55,6 +55,7 @@ func sendRequest(req *http.Request, maxRetries int) (map[string]interface{}, err
 		}
 
 		body, err := io.ReadAll(resp.Body)
+		// fmt.Print(body)
 		resp.Body.Close() // 読み込み終わったらすぐにクローズ
 		if err != nil {
 			return resp, fmt.Errorf("response body read error: %w", err)
@@ -66,7 +67,7 @@ func sendRequest(req *http.Request, maxRetries int) (map[string]interface{}, err
 			fmt.Printf("Raw Response Body Decode Error: %v\n", err)
 			return resp, err //デコードに失敗したら、エラーを返す
 		}
-		// fmt.Println("Raw Response Body (UTF-8, one line per JSON):")
+		fmt.Println("Raw Response Body (UTF-8, one line per JSON):")
 		scanner := bufio.NewScanner(strings.NewReader(string(bodyUTF8)))
 		for scanner.Scan() {
 			line := scanner.Text()
@@ -77,7 +78,7 @@ func sendRequest(req *http.Request, maxRetries int) (map[string]interface{}, err
 			// JSON として有効か確認 (簡易チェック)
 			var js map[string]interface{}
 			if json.Unmarshal([]byte(line), &js) == nil {
-				// fmt.Println(line)
+				fmt.Println(line)
 			} else {
 				fmt.Println("  Invalid JSON:", line)
 			}

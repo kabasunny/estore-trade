@@ -2,12 +2,12 @@
 package tachibana
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url" // URLエンコードのために追加
 	"time"
 
 	"estore-trade/internal/domain"
@@ -27,11 +27,17 @@ func (tc *TachibanaClientImple) PlaceOrder(ctx context.Context, order *domain.Or
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal payload: %w", err)
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, tc.requestURL, bytes.NewBuffer(payloadJSON))
+
+	// URLエンコード (GETリクエスト)
+	encodedPayload := url.QueryEscape(string(payloadJSON))
+	requestURL := tc.requestURL + "?" + encodedPayload
+
+	// req, err := http.NewRequestWithContext(ctx, http.MethodPost, tc.requestURL, bytes.NewBuffer(payloadJSON))
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, requestURL, nil) // GET に変更, body は nil
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Type", "application/json") // (GETの場合は不要だが、残しておく)
 	req, cancel := withContextAndTimeout(req, 60*time.Second)
 	defer cancel()
 
@@ -40,8 +46,6 @@ func (tc *TachibanaClientImple) PlaceOrder(ctx context.Context, order *domain.Or
 		return nil, fmt.Errorf("place order failed: %w", err)
 	}
 
-	// internal/infrastructure/persistence/tachibana/mthd_place_order.go
-
 	if resultCode, ok := response["sResultCode"].(string); ok && resultCode != "0" {
 		warnCode, _ := response["sWarningCode"].(string)
 		warnText, _ := response["sWarningText"].(string)
@@ -49,10 +53,6 @@ func (tc *TachibanaClientImple) PlaceOrder(ctx context.Context, order *domain.Or
 		return nil, fmt.Errorf("order API returned an error: %s - %s", resultCode, response["sResultText"])
 	}
 
-	//order.ID = response["sOrderNumber"].(string) //エラー箇所
-	// order.Status = "pending" //初期状態ではpending
-
-	//追加
 	orderID, ok := response["sOrderNumber"].(string)
 	if !ok {
 		return nil, errors.New("order number not found in response")
