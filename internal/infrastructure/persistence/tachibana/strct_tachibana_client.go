@@ -11,8 +11,10 @@ import (
 
 // TachibanaClientImple 構造体の定義
 type TachibanaClientImple struct {
-	baseURL    *url.URL
-	apiKey     string
+	baseURL  *url.URL
+	userID   string // 立花証券ユーザーID
+	password string // 立花証券パスワード
+	// apiKey     string
 	secret     string
 	logger     *zap.Logger
 	loggined   bool

@@ -33,15 +33,7 @@ func main() {
 		log.Fatal(".env file not found", err)
 	}
 
-	// デモ環境
-	// demoBaseURL := os.Getenv("TACHIBANA_DEMO_URL")
-	// demoUserID := os.Getenv("TACHIBANA_USER_ID")
-	// demoPassword := os.Getenv("TACHIBANA_PASSWORD")
-	// runEnvironment("Demo", demoBaseURL, demoUserID, demoPassword)
-
-	// fmt.Println("------------------------------------") // 環境の区切り
-
-	// 本番環境
+	// DEMO環境と本番環境は .env　内の記述で切り替える
 	prodBaseURL := os.Getenv("TACHIBANA_BASE_URL")
 	prodUserID := os.Getenv("TACHIBANA_USER_ID")
 	prodPassword := os.Getenv("TACHIBANA_PASSWORD")

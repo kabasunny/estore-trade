@@ -17,6 +17,8 @@ func NewTachibanaClient(cfg *config.Config, logger *zap.Logger, masterData *doma
 	}
 	return &TachibanaClientImple{
 		baseURL:          parsedURL,
+		userID:           cfg.TachibanaUserID,   // userID をセット
+		password:         cfg.TachibanaPassword, // password をセット
 		logger:           logger,
 		loggined:         false,
 		pNo:              0,

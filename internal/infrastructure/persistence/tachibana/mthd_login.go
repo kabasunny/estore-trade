@@ -1,16 +1,17 @@
+// internal/infrastructure/persistence/tachibana/mthd_login.go
 package tachibana
 
 import (
 	"context"
 	"time"
-
-	"estore-trade/internal/config"
+	//"estore-trade/internal/config" // 不要
 )
 
 // Login は API にログインし、仮想URLを返す。有効期限内ならキャッシュされたURLを返す
 func (tc *TachibanaClientImple) Login(ctx context.Context, cfg interface{}) error {
-	userID := cfg.(*config.Config).TachibanaUserID // 型アサーション
-	password := cfg.(*config.Config).TachibanaPassword
+	// 不要
+	//userID := cfg.(*config.Config).TachibanaUserID // 型アサーション
+	//password := cfg.(*config.Config).TachibanaPassword
 
 	// Read Lock: キャッシュされたURLが有効ならそれを返す
 	tc.mu.RLock()
@@ -24,7 +25,8 @@ func (tc *TachibanaClientImple) Login(ctx context.Context, cfg interface{}) erro
 	tc.mu.Lock()
 	defer tc.mu.Unlock()
 
-	loggined, err := login(ctx, tc, userID, password)
+	//loggined, err := login(ctx, tc, userID, password) // configから取得していた箇所を変更
+	loggined, err := login(ctx, tc, tc.userID, tc.password) //自身のフィールドを参照
 	tc.loggined = loggined
 
 	return err

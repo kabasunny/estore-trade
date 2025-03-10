@@ -1,64 +1,297 @@
+// internal/infrastructure/persistence/tachibana/util_map_to_struct.go
 package tachibana
 
 import (
-	"encoding/json"
+	"estore-trade/internal/domain"
 	"fmt"
+	"strconv"
 )
 
-// mapToStruct は、map[string]interface{} を構造体にマッピングする汎用関数
+// mapToStruct は、map[string]interface{} を構造体にマッピングします。
+// 今回は、IssueMaster, SystemStatus, DateInfo, OperationStatusKabu 構造体に特化した実装になっています。
 func mapToStruct(data map[string]interface{}, result interface{}) error {
-	// fmt.Printf("DEBUG: mapToStruct input: %+v\n", data)
-	b, err := json.Marshal(data)
-	if err != nil {
-		fmt.Printf("ERROR: json.Marshal failed: %v\n", err)
-		return err
-	}
-	// fmt.Printf("DEBUG: JSON output: %s\n", string(b)) // 追加
+	switch v := result.(type) {
+	case *domain.IssueMaster: // IssueMasterへのポインタの場合
+		if value, ok := data["sIssueCode"].(string); ok {
+			v.IssueCode = value
+		}
+		if value, ok := data["sIssueName"].(string); ok {
+			v.IssueName = value
+		}
+		// 他の文字列フィールドも同様に...
+		if value, ok := data["sTokuteiF"].(string); ok {
+			v.TokuteiF = value
+		}
+		// 数値型フィールド (文字列として返ってくる場合)  ここは削除
 
-	err = json.Unmarshal(b, result)
-	if err != nil {
-		fmt.Printf("ERROR: json.Unmarshal failed: %v\n", err)
+	case *domain.SystemStatus:
+		if value, ok := data["sSystemStatusKey"].(string); ok {
+			v.SystemStatusKey = value
+		}
+		if value, ok := data["sLoginKyokaKubun"].(string); ok {
+			v.LoginPermission = value
+		}
+		if value, ok := data["sSystemStatus"].(string); ok {
+			v.SystemState = value
+		}
+
+	case *domain.DateInfo:
+		if value, ok := data["sDayKey"].(string); ok {
+			v.DateKey = value
+		}
+		// 他のフィールドも同様に...
+		if value, ok := data["sMaeEigyouDay_1"].(string); ok {
+			v.PrevBusinessDay1 = value
+		}
+		if value, ok := data["sTheDay"].(string); ok {
+			v.TheDay = value
+		}
+		if value, ok := data["sYokuEigyouDay_1"].(string); ok {
+			v.NextBusinessDay1 = value
+		}
+		if value, ok := data["sKabuUkewatasiDay"].(string); ok {
+			v.StockDeliveryDate = value
+		}
+
+	case *domain.CallPrice: //callprice
+		if value, ok := data["sTaniNo"].(string); ok {
+			v.UnitNumber = value
+		}
+		if value, ok := data["sTekiyouDay"].(string); ok {
+			v.ApplyDate = value
+		}
+
+		// 基準値段と呼値単価 (float64, string からの変換が必要)
+		for i := 1; i <= 20; i++ {
+			priceKey := fmt.Sprintf("sKizunPrice_%d", i)
+			unitPriceKey := fmt.Sprintf("sYobineTanka_%d", i)
+			decimalKey := fmt.Sprintf("sDecimal_%d", i)
+
+			if priceStr, ok := data[priceKey].(string); ok {
+				price, err := strconv.ParseFloat(priceStr, 64)
+				if err != nil {
+					return fmt.Errorf("failed to parse %s: %w", priceKey, err)
+				}
+				switch i { // 構造体のフィールドに代入
+				case 1:
+					v.Price1 = price
+				case 2:
+					v.Price2 = price
+				case 3:
+					v.Price3 = price
+				case 4:
+					v.Price4 = price
+				case 5:
+					v.Price5 = price
+				case 6:
+					v.Price6 = price
+				case 7:
+					v.Price7 = price
+				case 8:
+					v.Price8 = price
+				case 9:
+					v.Price9 = price
+				case 10:
+					v.Price10 = price
+				case 11:
+					v.Price11 = price
+				case 12:
+					v.Price12 = price
+				case 13:
+					v.Price13 = price
+				case 14:
+					v.Price14 = price
+				case 15:
+					v.Price15 = price
+				case 16:
+					v.Price16 = price
+				case 17:
+					v.Price17 = price
+				case 18:
+					v.Price18 = price
+				case 19:
+					v.Price19 = price
+				case 20:
+					v.Price20 = price
+				}
+			}
+
+			if unitPriceStr, ok := data[unitPriceKey].(string); ok {
+				unitPrice, err := strconv.ParseFloat(unitPriceStr, 64)
+				if err != nil {
+					return fmt.Errorf("failed to parse %s: %w", unitPriceKey, err)
+				}
+				switch i { //構造体のフィールドに代入
+				case 1:
+					v.UnitPrice1 = unitPrice
+				case 2:
+					v.UnitPrice2 = unitPrice
+				case 3:
+					v.UnitPrice3 = unitPrice
+				case 4:
+					v.UnitPrice4 = unitPrice
+				case 5:
+					v.UnitPrice5 = unitPrice
+				case 6:
+					v.UnitPrice6 = unitPrice
+				case 7:
+					v.UnitPrice7 = unitPrice
+				case 8:
+					v.UnitPrice8 = unitPrice
+				case 9:
+					v.UnitPrice9 = unitPrice
+				case 10:
+					v.UnitPrice10 = unitPrice
+				case 11:
+					v.UnitPrice11 = unitPrice
+				case 12:
+					v.UnitPrice12 = unitPrice
+				case 13:
+					v.UnitPrice13 = unitPrice
+				case 14:
+					v.UnitPrice14 = unitPrice
+				case 15:
+					v.UnitPrice15 = unitPrice
+				case 16:
+					v.UnitPrice16 = unitPrice
+				case 17:
+					v.UnitPrice17 = unitPrice
+				case 18:
+					v.UnitPrice18 = unitPrice
+				case 19:
+					v.UnitPrice19 = unitPrice
+				case 20:
+					v.UnitPrice20 = unitPrice
+				}
+			}
+			if decimalStr, ok := data[decimalKey].(string); ok {
+				decimal, err := strconv.Atoi(decimalStr)
+				if err != nil {
+					return fmt.Errorf("failed to parse %s to int: %w", decimalKey, err)
+				}
+				switch i { //構造体のフィールドに代入
+				case 1:
+					v.Decimal1 = decimal
+				case 2:
+					v.Decimal2 = decimal
+				case 3:
+					v.Decimal3 = decimal
+				case 4:
+					v.Decimal4 = decimal
+				case 5:
+					v.Decimal5 = decimal
+				case 6:
+					v.Decimal6 = decimal
+				case 7:
+					v.Decimal7 = decimal
+				case 8:
+					v.Decimal8 = decimal
+				case 9:
+					v.Decimal9 = decimal
+				case 10:
+					v.Decimal10 = decimal
+				case 11:
+					v.Decimal11 = decimal
+				case 12:
+					v.Decimal12 = decimal
+				case 13:
+					v.Decimal13 = decimal
+				case 14:
+					v.Decimal14 = decimal
+				case 15:
+					v.Decimal15 = decimal
+				case 16:
+					v.Decimal16 = decimal
+				case 17:
+					v.Decimal17 = decimal
+				case 18:
+					v.Decimal18 = decimal
+				case 19:
+					v.Decimal19 = decimal
+				case 20:
+					v.Decimal20 = decimal
+				}
+			}
+		}
+
+	case *domain.IssueMarketMaster:
+		if value, ok := data["sIssueCode"].(string); ok {
+			v.IssueCode = value
+		}
+		if value, ok := data["sSizyouC"].(string); ok {
+			v.MarketCode = value
+		}
+
+		// 他のフィールドも同様に...
+		if value, ok := data["sNehabaMin"].(string); ok {
+			if value == "" { //空文字チェック
+				v.PriceRangeMin = 0.0
+			} else {
+				f, err := strconv.ParseFloat(value, 64)
+				if err != nil {
+					return fmt.Errorf("failed to convert sNehabaMin to float64: %w", err)
+				}
+				v.PriceRangeMin = f
+			}
+		}
+		if value, ok := data["sNehabaMax"].(string); ok {
+			if value == "" { //空文字チェック
+				v.PriceRangeMax = 0.0
+			} else {
+				f, err := strconv.ParseFloat(value, 64)
+				if err != nil {
+					return fmt.Errorf("failed to convert sNehabaMax to float64: %w", err)
+				}
+				v.PriceRangeMax = f
+			}
+		}
+		if value, ok := data["sSinyouC"].(string); ok {
+			v.SinyouC = value
+		}
+		if value, ok := data["sZenzituOwarine"].(string); ok {
+			if value == "" { //空文字チェック
+				v.PreviousClose = 0.0
+			} else {
+				f, err := strconv.ParseFloat(value, 64)
+				if err != nil {
+					return fmt.Errorf("failed to convert sZenzituOwarine to float64: %w", err)
+				}
+				v.PreviousClose = f
+			}
+		}
+		if value, ok := data["sIssueKubunC"].(string); ok {
+			v.IssueKubunC = value
+		}
+		if value, ok := data["sZyouzyouKubun"].(string); ok {
+			v.ZyouzyouKubun = value
+		}
+		if value, ok := data["sYobineTaniNo"].(string); ok {
+			v.CallPriceUnitNumber = value
+		}
+		if value, ok := data["sYobineTaniNoYoku"].(string); ok {
+			v.CallPriceUnitNumberYoku = value
+		}
+
+	case *domain.IssueMarketRegulation:
+		if value, ok := data["sIssueCode"].(string); ok {
+			v.IssueCode = value
+		}
+		// 他のフィールドも同様に...
+
+	case *domain.OperationStatusKabu:
+		if value, ok := data["sZyouzyouSizyou"].(string); ok {
+			v.ListedMarket = value
+		}
+		if value, ok := data["sUnyouUnit"].(string); ok {
+			v.Unit = value
+		}
+		if value, ok := data["sUnyouStatus"].(string); ok {
+			v.Status = value
+		}
+
+	default:
+		return fmt.Errorf("unsupported type: %T", result)
 	}
-	// fmt.Printf("DEBUG: mapToStruct output: %+v, error: %v\n", result, err)
-	return err
+
+	return nil
 }
-
-// OperationStatusKabu 構造体と map[string]map[string]OperationStatusKabu] 型のデータを使った具体例で、mapToStruct の処理の流れ
-
-// 1. 元のデータ (map[string]interface{}):
-// processResponse 関数で response (map[string]interface{}) から取り出されたデータ (data) は、以下のような map[string]interface{} 型のデータになっている
-// (立花証券API からのレスポンスの一部を想定）
-
-// dataMap (map[string]interface{}) の例
-// dataMap := map[string]interface{}{
-// 	"sZyouzyouSizyou": "00", // 上場市場コード (例: 東証)
-// 	"sUnyouUnit":      "1",  // 運用単位 (例: 単元)
-// 	"sUnyouStatus":    "1",  // 運用ステータス (例: 売買可能)
-// }
-
-// 2. mapToStruct 関数による変換:
-// mapToStruct(dataMap, &operationStatusKabu) が呼び出されると、以下の処理が行われる
-// json.Marshal(data):
-// dataMap (map[string]interface{}) が JSON 形式のバイト列 ([]byte) に変換される
-// dataMap を Marshal した結果 (JSON)
-// {
-//     "sZyouzyouSizyou": "00",
-//     "sUnyouUnit": "1",
-//     "sUnyouStatus": "1"
-// }
-// JSON 形式のバイト列が、result (ここでは &operationStatusKabu、つまり OperationStatusKabu 構造体へのポインタ) が指す構造体にデコード
-// json.Unmarshal は、JSON のキーと構造体のフィールドタグ (json:"...") を照合して、値を対応するフィールドに格納
-
-// operationStatusKabu (OperationStatusKabu 構造体) の例
-// type OperationStatusKabu struct {
-//     ListedMarket string `json:"sZyouzyouSizyou"` // 上場市場
-//     Unit         string `json:"sUnyouUnit"`      // 運用単位
-//     Status       string `json:"sUnyouStatus"`    // 運用ステータス
-// }
-
-// Unmarshal 後の operationStatusKabu の値
-// operationStatusKabu = OperationStatusKabu{
-//     ListedMarket: "00",
-//     Unit:         "1",
-//     Status:       "1",
-// }

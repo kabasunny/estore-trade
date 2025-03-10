@@ -1,3 +1,4 @@
+// internal/infrastructure/persistence/tachibana/mthd_start_event_stream.go
 package tachibana
 
 import (
@@ -16,7 +17,8 @@ func (es *EventStream) Start() error {
 	defer cancel()
 
 	// ログインして仮想URLを取得 (tachibanaClient.Login はセッション管理を行うように修正済み)
-	err := es.tachibanaClient.Login(ctx, es.config)
+	//err := es.tachibanaClient.Login(ctx, es.config) // ログイン
+	err := es.tachibanaClient.Login(ctx, nil) // ログイン 引数を削除
 	if err != nil {
 		es.logger.Error("Failed to login for event stream", zap.Error(err))
 		return fmt.Errorf("failed to login for event stream: %w", err)

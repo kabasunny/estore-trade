@@ -1,3 +1,4 @@
+// internal/infrastructure/persistence/tachibana/mthd_get_system_status.go
 package tachibana
 
 import "estore-trade/internal/domain"
@@ -6,5 +7,10 @@ import "estore-trade/internal/domain"
 func (tc *TachibanaClientImple) GetSystemStatus() domain.SystemStatus {
 	tc.mu.RLock()
 	defer tc.mu.RUnlock()
+
+	// masterData が nil の場合はデフォルト値を返す (追加)
+	if tc.masterData == nil {
+		return domain.SystemStatus{} // 空の SystemStatus
+	}
 	return tc.masterData.SystemStatus
 }
