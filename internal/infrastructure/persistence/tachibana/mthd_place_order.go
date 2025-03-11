@@ -17,6 +17,10 @@ import (
 
 // PlaceOrder は API に対して新しい株式注文を行う
 func (tc *TachibanaClientImple) PlaceOrder(ctx context.Context, order *domain.Order) (*domain.Order, error) {
+	// コンテキストの状態を確認
+	if ctx.Err() != nil {
+		return nil, ctx.Err() // 即座にエラーを返す
+	}
 
 	payload, err := ConvertOrderToPlaceOrderPayload(order, tc) // 変換関数を呼び出す
 	if err != nil {
@@ -28,9 +32,15 @@ func (tc *TachibanaClientImple) PlaceOrder(ctx context.Context, order *domain.Or
 		return nil, fmt.Errorf("failed to marshal payload: %w", err)
 	}
 
+	// GetRequestURL() を呼び出して URL を取得。エラーなら早期 return
+	requestURL, err := tc.GetRequestURL()
+	if err != nil {
+		return nil, fmt.Errorf("request URL not found, need to Login: %w", err) // エラーメッセージと原因
+	}
+
 	// URLエンコード (GETリクエスト)
 	encodedPayload := url.QueryEscape(string(payloadJSON))
-	requestURL := tc.requestURL + "?" + encodedPayload
+	requestURL += "?" + encodedPayload
 
 	// req, err := http.NewRequestWithContext(ctx, http.MethodPost, tc.requestURL, bytes.NewBuffer(payloadJSON))
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, requestURL, nil) // GET に変更, body は nil

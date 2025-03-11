@@ -2,7 +2,7 @@
 package tachibana
 
 import (
-	"bufio" // bufio を追加
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"

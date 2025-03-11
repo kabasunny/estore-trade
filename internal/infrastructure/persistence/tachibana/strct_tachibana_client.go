@@ -1,3 +1,4 @@
+// internal/infrastructure/persistence/tachibana/strct_tachibana_client.go
 package tachibana
 
 import (
@@ -30,4 +31,6 @@ type TachibanaClientImple struct {
 	targetIssueCodes   []string
 	targetIssueCodesMu sync.RWMutex // 多分いらんので最後に消す
 	masterData         *domain.MasterData
+
+	//HTTPClient HTTPClient // HTTPClientインターフェースのフィールドを削除
 }

@@ -1,4 +1,4 @@
-// internal/infrastructure/persistence/tachibana/iface_client.go
+// internal/infrastructure/persistence/tachibana/iface_tachibana_client.go
 package tachibana
 
 import (
@@ -30,4 +30,6 @@ type TachibanaClient interface {
 	// SetTargetIssues(ctx context.Context, issueCodes []string) error
 	// GetPriceData(ctx context.Context, issueCodes []string) ([]domain.PriceData, error)
 	// GetMasterData() *domain.MasterData
+
+	GetPositions(ctx context.Context) ([]domain.Position, error)
 }

@@ -7,6 +7,7 @@ import (
 
 // Position ポジション
 type Position struct {
+	ID              string    `json:"id"` // 建玉ID (UUID) <- これを追加
 	Symbol          string    `json:"symbol"`
 	Side            string    `json:"side"` //"long" or "short"
 	Quantity        int       `json:"quantity"`
