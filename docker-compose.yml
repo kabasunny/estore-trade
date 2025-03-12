@@ -1,0 +1,35 @@
+version: "3.8"
+services:
+  db: # postgres から db にサービス名を変更 (Go コードと合わせる)
+    image: postgres:16-alpine
+    container_name: postgres # そのままでも良いが、db に合わせても良い
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./docker/postgres/init.d:/docker-entrypoint-initdb.d # 存在するなら
+      - postgres_data:/var/lib/postgresql/data # volume を使うように変更
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
+      POSTGRES_DB: ${DB_NAME}
+    # hostname: postgres # 不要なので削除 (サービス名 db を使う)
+    restart: always
+    # user: root  # root での実行は非推奨。デフォルトの postgres ユーザーを使う
+
+  pgadmin:
+    image: dpage/pgadmin4
+    restart: always
+    ports:
+      - "8082:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin  # volume を使うように変更
+    depends_on:
+      - db
+
+volumes:
+  postgres_data: {} # 名前付き volume を定義
+  pgadmin_data: {}

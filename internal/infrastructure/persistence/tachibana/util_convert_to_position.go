@@ -64,5 +64,9 @@ func convertToPosition(data map[string]interface{}) (*domain.Position, error) {
 		position.MarginTradeType = tradeTypeStr // sOrderBensaiKubun の値をそのまま MarginTradeType に設定
 	}
 
+	// if orderID, ok := data["sOrderNumber"].(string); ok {
+	// 	position.OrderID = orderID
+	// }
+
 	return position, nil
 }

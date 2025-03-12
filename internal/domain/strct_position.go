@@ -7,12 +7,13 @@ import (
 
 // Position ポジション
 type Position struct {
-	ID              string    `json:"id"` // 建玉ID (UUID) <- これを追加
-	Symbol          string    `json:"symbol"`
-	Side            string    `json:"side"` //"long" or "short"
-	Quantity        int       `json:"quantity"`
-	Price           float64   `json:"price"`
-	OpenDate        time.Time `json:"open_date"`
-	DueDate         string    `json:"due_date"`          // 返済期限 (YYYYMMDD)
-	MarginTradeType string    `json:"margin_trade_type"` // 信用取引区分
+	ID              string
+	Symbol          string
+	Side            string // string のまま
+	Quantity        int
+	Price           float64
+	OpenDate        time.Time
+	DueDate         string // YYYYMMDD
+	MarginTradeType string // 制度信用、一般信用など
+	OrderID         string // 注文番号  //★ここ
 }

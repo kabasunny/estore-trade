@@ -22,7 +22,6 @@ func (tc *TachibanaClientImple) DownloadMasterData(ctx context.Context) (*domain
 		"sJsonOfmt": "4",
 		// 今回はすべて取得
 		"sTargetCLMID": "CLMSystemStatus,CLMDateZyouhou,CLMYobine,CLMIssueMstKabu,CLMIssueSizyouMstKabu,CLMIssueSizyouKiseiKabu,CLMUnyouStatusKabu,CLMEventDownloadComplete",
-		// "sTargetCLMID": "CLMSystemStatus,CLMDateZyouhou", // 絞り込み
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {

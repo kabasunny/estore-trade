@@ -3,14 +3,15 @@ package tachibana
 
 import (
 	"fmt"
+	"path/filepath"
+	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
 
 	"estore-trade/internal/config"
 	"estore-trade/internal/domain"
-	"path/filepath"
-	"runtime"
 
 	"go.uber.org/zap/zaptest"
 )
@@ -148,4 +149,76 @@ func (tc *TachibanaClientImple) GetMasterURLForTest() string {
 	tc.mu.RLock()
 	defer tc.mu.RUnlock()
 	return tc.masterURL
+}
+
+// GetPositionSymbol はテスト用に Position の Symbol を取得します。
+func GetPositionSymbol(p *domain.Position) string {
+	return p.Symbol
+}
+
+// GetPositionQuantity はテスト用に Position の Quantity を取得します。
+func GetPositionQuantity(p *domain.Position) int {
+	return p.Quantity
+}
+
+// GetPositionID はテスト用に Position の ID (建玉番号) を取得します。
+func GetPositionID(p *domain.Position) string {
+	return p.ID
+}
+
+// GetOrderSymbol はテスト用に Order の Symbol を取得します。
+func GetOrderSymbol(o *domain.Order) string {
+	return o.Symbol
+}
+
+// GetOrderSide はテスト用に Order の Side を取得します。
+func GetOrderSide(o *domain.Order) string {
+	return o.Side
+}
+
+// GetOrderOrderType はテスト用に Order の OrderType を取得します。
+func GetOrderOrderType(o *domain.Order) string {
+	return o.OrderType
+}
+
+// GetOrderCondition はテスト用に Order の Condition を取得します。
+func GetOrderCondition(o *domain.Order) string {
+	return o.Condition
+}
+
+// GetOrderQuantity はテスト用に Order の Quantity を取得します。
+func GetOrderQuantity(o *domain.Order) int {
+	return o.Quantity
+}
+
+// GetOrderPrice はテスト用に Order の Price を取得します。
+func GetOrderPrice(o *domain.Order) float64 {
+	return o.Price
+}
+
+// GetOrderTriggerPrice はテスト用に Order の TriggerPriceを取得します
+func GetOrderTriggerPrice(o *domain.Order) float64 {
+	return o.TriggerPrice
+}
+
+// GetOrderMarketCode はテスト用に Order の MarketCode を取得します。
+func GetOrderMarketCode(o *domain.Order) string {
+	return o.MarketCode
+}
+
+// GetOrderTachibanaOrderID はテスト用に Order の TachibanaOrderID を取得します。
+func GetOrderTachibanaOrderID(o *domain.Order) string {
+	return o.TachibanaOrderID
+}
+
+// GetOrderStatus はテスト用に Order の Status を取得します。
+func GetOrderStatus(o *domain.Order) string {
+	return o.Status
+}
+
+// GetPNoForTest はテスト用に pNo を取得します。
+func (tc *TachibanaClientImple) GetPNoForTest() string {
+	tc.pNoMu.Lock()
+	defer tc.pNoMu.Unlock()
+	return strconv.FormatInt(tc.pNo, 10)
 }

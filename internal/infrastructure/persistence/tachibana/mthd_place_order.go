@@ -67,7 +67,7 @@ func (tc *TachibanaClientImple) PlaceOrder(ctx context.Context, order *domain.Or
 	if !ok {
 		return nil, errors.New("order number not found in response")
 	}
-	order.ID = orderID
+	order.TachibanaOrderID = orderID
 	order.Status = "pending" //初期状態ではpending
 
 	return order, nil

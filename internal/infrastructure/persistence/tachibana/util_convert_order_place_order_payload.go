@@ -14,9 +14,9 @@ func ConvertOrderToPlaceOrderPayload(order *domain.Order, tc *TachibanaClientImp
 	// 1. 売買区分 (sBaibaiKubun)
 	var baibaiKubun string
 	switch order.Side {
-	case "buy":
+	case "long", "buy": // "buy" を追加
 		baibaiKubun = baibaiKubunBuy
-	case "sell":
+	case "short", "sell": // "sell" を追加
 		baibaiKubun = baibaiKubunSell
 	default:
 		return nil, fmt.Errorf("invalid order side: %s", order.Side)
@@ -48,12 +48,13 @@ func ConvertOrderToPlaceOrderPayload(order *domain.Order, tc *TachibanaClientImp
 		} else { // "現物" or その他
 			genkinShinyouKubun = genkinShinyouKubunGenbutsu // 現物扱い
 		}
+		tategyokuZyoutoekiKazeiC = "*" // デフォルト値"*"を設定
 
 	// 信用返済
 	case "credit_close_market", "credit_close_limit", "credit_close_stop", "credit_close_stop_limit":
 		genkinShinyouKubun = "4" // 信用返済
 		//tatebiType = "1"                  // 個別指定 (仮)  // ここももう使わない
-		tategyokuZyoutoekiKazeiC = "*" // 指定なし (仮)
+		//tategyokuZyoutoekiKazeiC = "*" // 指定なし (仮) ここを削除
 
 		if len(order.Positions) == 0 {
 			return nil, fmt.Errorf("no positions specified for credit close order")
@@ -75,6 +76,7 @@ func ConvertOrderToPlaceOrderPayload(order *domain.Order, tc *TachibanaClientImp
 				"sOrderSuryou":     strconv.Itoa(position.Quantity), // 数量 (domain.Position から取得)
 			})
 		}
+		tategyokuZyoutoekiKazeiC = "*" // デフォルト値"*"を設定
 	// 現引
 	case "credit_to_spot":
 		genkinShinyouKubun = "4" // 信用返済
@@ -123,7 +125,7 @@ func ConvertOrderToPlaceOrderPayload(order *domain.Order, tc *TachibanaClientImp
 		"p_sd_date":                 formatSDDate(time.Now()),     // システム日付
 		"sJsonOfmt":                 "4",                          // JSON出力フォーマット (固定)
 		"sCondition":                "0",                          // 執行条件 (デフォルト: 指値)
-		"sOrderPrice":               "0",                          // 注文価格 (デフォルト: 成行)
+		"sOrderPrice":               "0",                          // 注文価格 (デフォルト: 成行)  <-- ここも修正
 		"sGyakusasiOrderType":       "0",                          // 逆指値注文タイプ (デフォルト: なし)
 		"sGyakusasiZyouken":         "0",                          // 逆指値条件 (デフォルト: なし)
 		"sGyakusasiPrice":           "*",                          // 逆指値価格 (デフォルト: *)
@@ -131,10 +133,14 @@ func ConvertOrderToPlaceOrderPayload(order *domain.Order, tc *TachibanaClientImp
 		"sTategyokuZyoutoekiKazeiC": tategyokuZyoutoekiKazeiC,     // 建玉譲渡益課税区分 (信用返済時のみ)
 	}
 
-	//sTatebiType の設定 (信用返済の場合のみ)
+	// ★★★ 以下の部分を 3. 基本的なパラメータ の直後に移動 ★★★
 	if genkinShinyouKubun == "4" {
 		payload["sTatebiType"] = "1" // 信用返済
+		if baibaiKubun == "7" {      //現引
+			payload["sOrderPrice"] = "*"
+		}
 	}
+	// ★★★ 移動ここまで ★★★
 
 	// 4. 信用返済注文の場合は、建玉指定データを追加
 	if len(aCLMKabuHensaiData) > 0 {
@@ -157,7 +163,12 @@ func ConvertOrderToPlaceOrderPayload(order *domain.Order, tc *TachibanaClientImp
 		payload["sOrderPrice"] = "*"                                                        // 注文価格は "*"
 		payload["sGyakusasiOrderType"] = "1"                                                // 通常逆指値
 		payload["sGyakusasiZyouken"] = strconv.FormatFloat(order.TriggerPrice, 'f', -1, 64) // 逆指値条件
-		payload["sGyakusasiPrice"] = strconv.FormatFloat(order.Price, 'f', -1, 64)          // 逆指値価格
+		//以下修正
+		if order.Price == 0 {
+			payload["sGyakusasiPrice"] = "0"
+		} else {
+			payload["sGyakusasiPrice"] = strconv.FormatFloat(order.Price, 'f', -1, 64) // 逆指値価格
+		}
 
 	case "stop_limit", "credit_close_stop_limit":
 		// 通常+逆指値
@@ -165,8 +176,16 @@ func ConvertOrderToPlaceOrderPayload(order *domain.Order, tc *TachibanaClientImp
 		payload["sOrderPrice"] = strconv.FormatFloat(order.Price, 'f', -1, 64)              // 通常注文の価格
 		payload["sGyakusasiOrderType"] = "2"                                                // 通常+逆指値
 		payload["sGyakusasiZyouken"] = strconv.FormatFloat(order.TriggerPrice, 'f', -1, 64) // 逆指値条件
-		payload["sGyakusasiPrice"] = strconv.FormatFloat(order.Price, 'f', -1, 64)          // 逆指値価格
 
+		//payload["sGyakusasiPrice"] = strconv.FormatFloat(order.Price, 'f', -1, 64)          // 逆指値価格　ここが間違っていた
+		if order.AfterTriggerOrderType == "market" {
+			payload["sGyakusasiPrice"] = "0"
+		} else if order.AfterTriggerOrderType == "limit" {
+			payload["sGyakusasiPrice"] = strconv.FormatFloat(order.AfterTriggerPrice, 'f', -1, 64)
+		} else {
+			// エラー処理 (AfterTriggerOrderType が不正な値の場合)
+			return nil, fmt.Errorf("invalid AfterTriggerOrderType: %s", order.AfterTriggerOrderType)
+		}
 	default: // 現状、ここには来ないはずだが、念のためエラー処理
 		return nil, fmt.Errorf("unsupported order type: %s", order.OrderType)
 	}

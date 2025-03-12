@@ -8,7 +8,7 @@ import (
 type Order struct {
 	ID               string    `json:"id"`                 // 注文ID (UUID)
 	Symbol           string    `json:"symbol"`             // 銘柄コード
-	Side             string    `json:"side"`               // 売買区分 ("buy" or "sell")
+	Side             string    `json:"side"`               // 売買区分 ("long" or "short")
 	OrderType        string    `json:"order_type"`         // 注文種別
 	Price            float64   `json:"price"`              // 注文価格 (指値、逆指値の場合)
 	TriggerPrice     float64   `json:"trigger_price"`      // トリガー価格 (逆指値の場合)
@@ -25,4 +25,8 @@ type Order struct {
 	Condition  string     `json:"condition"`   // 執行条件（"credit_open"（信用新規）など）
 	MarketCode string     `json:"market_code"` // 市場コード
 	Positions  []Position `json:"positions"`   // 信用返済時の建玉情報（追加）
+
+	AfterTriggerOrderType string  // "market" or "limit"
+	AfterTriggerPrice     float64 // トリガー後の指値 (トリガー後指値の場合のみ)
+
 }
