@@ -29,7 +29,7 @@ func TestPlaceOrder_SpotStopSell(t *testing.T) {
 			Symbol:     "7974", // 例: 任天堂
 			Side:       "buy",
 			OrderType:  "market",
-			Condition:  "", // 現物
+			TradeType:  "", // 現物
 			Quantity:   100,
 			MarketCode: "00", // 東証
 		}
@@ -44,7 +44,7 @@ func TestPlaceOrder_SpotStopSell(t *testing.T) {
 			Symbol:       "7974", // 例: 任天堂
 			Side:         "sell",
 			OrderType:    "stop",
-			Condition:    "", // 現物
+			TradeType:    "", // 現物
 			Quantity:     100,
 			TriggerPrice: 9000.0, // 逆指値条件価格 (例: 現在価格が10000円として、9000円以下になったら)
 			Price:        0,      // 逆指値トリガー後、指値で売りたい場合は、ここに価格を設定
@@ -68,7 +68,7 @@ func TestPlaceOrder_SpotStopSell(t *testing.T) {
 			Symbol:       "7974",
 			Side:         "invalid_side", // 無効なSide
 			OrderType:    "stop",
-			Condition:    "",
+			TradeType:    "",
 			Quantity:     100,
 			TriggerPrice: 9000.0,
 			MarketCode:   "00",
@@ -86,7 +86,7 @@ func TestPlaceOrder_SpotStopSell(t *testing.T) {
 			Symbol:       "7974",
 			Side:         "sell",
 			OrderType:    "stop",
-			Condition:    "",
+			TradeType:    "",
 			Quantity:     0, // 無効な数量
 			TriggerPrice: 9000.0,
 			MarketCode:   "00",
@@ -104,7 +104,7 @@ func TestPlaceOrder_SpotStopSell(t *testing.T) {
 			Symbol:       "7974",
 			Side:         "sell",
 			OrderType:    "stop",
-			Condition:    "",
+			TradeType:    "",
 			Quantity:     100,
 			TriggerPrice: 0, // 無効なトリガー価格
 			MarketCode:   "00",
@@ -127,7 +127,7 @@ func TestPlaceOrder_SpotStopSell(t *testing.T) {
 			Symbol:     "7974",
 			Side:       "buy",
 			OrderType:  "market",
-			Condition:  "",
+			TradeType:  "",
 			Quantity:   100,
 			MarketCode: "00",
 		}
@@ -140,7 +140,7 @@ func TestPlaceOrder_SpotStopSell(t *testing.T) {
 			Symbol:       "invalid_code", // 無効な銘柄コード
 			Side:         "sell",
 			OrderType:    "stop",
-			Condition:    "",
+			TradeType:    "",
 			Quantity:     100,
 			TriggerPrice: 9000.0,
 			MarketCode:   "00",
@@ -159,7 +159,7 @@ func TestPlaceOrder_SpotStopSell(t *testing.T) {
 			Symbol:       "7974",
 			Side:         "sell",
 			OrderType:    "stop",
-			Condition:    "",
+			TradeType:    "",
 			Quantity:     100,
 			TriggerPrice: 9000.0,
 			MarketCode:   "00",
@@ -181,7 +181,7 @@ func TestPlaceOrder_SpotStopSell(t *testing.T) {
 			Symbol:     "7974",
 			Side:       "buy",
 			OrderType:  "market",
-			Condition:  "",
+			TradeType:  "",
 			Quantity:   100,
 			MarketCode: "00",
 		}
@@ -194,7 +194,7 @@ func TestPlaceOrder_SpotStopSell(t *testing.T) {
 			Symbol:       "7974",
 			Side:         "sell",
 			OrderType:    "stop",
-			Condition:    "",
+			TradeType:    "",
 			Quantity:     100,
 			TriggerPrice: 9000.0,
 			MarketCode:   "00",

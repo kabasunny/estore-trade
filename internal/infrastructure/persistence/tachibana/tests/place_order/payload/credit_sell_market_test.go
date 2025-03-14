@@ -1,4 +1,4 @@
-// internal/infrastructure/persistence/tachibana/tests/payload/place_order_credit_sell_market_test.go
+// internal/infrastructure/persistence/tachibana/tests/place_order/payload/credit_sell_market_test.go
 package payload_test
 
 import (
@@ -21,7 +21,7 @@ func TestPlaceOrder_CreditSellMarketPayload(t *testing.T) {
 			Symbol:     "7974",  // 例: 任天堂
 			Side:       "short", // "sell" から "short" に変更
 			OrderType:  "market",
-			Condition:  "credit_open", // 信用新規
+			TradeType:  "credit_open", // 信用新規
 			Quantity:   100,
 			MarketCode: "00", // 東証
 		}
@@ -58,4 +58,4 @@ func TestPlaceOrder_CreditSellMarketPayload(t *testing.T) {
 	})
 }
 
-// go test -v ./internal/infrastructure/persistence/tachibana/tests/payload/place_order_credit_sell_market_test.go
+// go test -v ./internal/infrastructure/persistence/tachibana/tests/place_order/payload/credit_sell_market_test.go

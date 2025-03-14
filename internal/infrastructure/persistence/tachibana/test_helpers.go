@@ -186,7 +186,7 @@ func GetOrderOrderType(o *domain.Order) string {
 
 // GetOrderCondition はテスト用に Order の Condition を取得します。
 func GetOrderCondition(o *domain.Order) string {
-	return o.Condition
+	return o.TradeType
 }
 
 // GetOrderQuantity はテスト用に Order の Quantity を取得します。

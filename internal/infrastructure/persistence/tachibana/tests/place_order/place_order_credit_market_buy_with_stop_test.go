@@ -29,7 +29,7 @@ func TestPlaceOrder_CreditMarketBuyWithStop(t *testing.T) {
 			Symbol:       "7974",        // 例: 任天堂
 			Side:         "buy",         // 買い
 			OrderType:    "stop",        // 逆指値
-			Condition:    "credit_open", // 信用新規
+			TradeType:    "credit_open", // 信用新規
 			Quantity:     100,
 			TriggerPrice: 11000.0, // 逆指値条件価格 (例: 現在価格が10000円として、11000円以上になったら)
 			Price:        0,       // TriggerPrice に達したら成行
@@ -57,7 +57,7 @@ func TestPlaceOrder_CreditMarketBuyWithStop(t *testing.T) {
 			Symbol:       "invalid_code", // 無効な銘柄コード
 			Side:         "buy",          // 買い
 			OrderType:    "stop",
-			Condition:    "credit_open",
+			TradeType:    "credit_open",
 			Quantity:     100,
 			TriggerPrice: 11000.0,
 			MarketCode:   "00",
@@ -78,7 +78,7 @@ func TestPlaceOrder_CreditMarketBuyWithStop(t *testing.T) {
 			Symbol:       "7974",
 			Side:         "invalid_side", // 無効なSide
 			OrderType:    "stop",
-			Condition:    "credit_open",
+			TradeType:    "credit_open",
 			Quantity:     100,
 			TriggerPrice: 11000.0,
 			MarketCode:   "00",
@@ -99,7 +99,7 @@ func TestPlaceOrder_CreditMarketBuyWithStop(t *testing.T) {
 			Symbol:       "7974",
 			Side:         "buy",
 			OrderType:    "stop",
-			Condition:    "credit_open",
+			TradeType:    "credit_open",
 			Quantity:     0, // 無効な数量
 			TriggerPrice: 11000.0,
 			MarketCode:   "00",
@@ -120,7 +120,7 @@ func TestPlaceOrder_CreditMarketBuyWithStop(t *testing.T) {
 			Symbol:       "7974",
 			Side:         "buy",
 			OrderType:    "stop",
-			Condition:    "credit_open",
+			TradeType:    "credit_open",
 			Quantity:     100,
 			TriggerPrice: 0, // 無効なトリガー価格
 			MarketCode:   "00",
@@ -138,7 +138,7 @@ func TestPlaceOrder_CreditMarketBuyWithStop(t *testing.T) {
 			Symbol:       "7974",
 			Side:         "buy",
 			OrderType:    "stop",
-			Condition:    "credit_open",
+			TradeType:    "credit_open",
 			Quantity:     100,
 			TriggerPrice: 11000.0,
 			MarketCode:   "00",
@@ -159,7 +159,7 @@ func TestPlaceOrder_CreditMarketBuyWithStop(t *testing.T) {
 			Symbol:       "7974",
 			Side:         "buy",
 			OrderType:    "stop",
-			Condition:    "credit_open",
+			TradeType:    "credit_open",
 			Quantity:     100,
 			TriggerPrice: 11000.0,
 			MarketCode:   "00",

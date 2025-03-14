@@ -20,7 +20,7 @@ func TestPlaceOrder_SpotSellMarketPayload(t *testing.T) {
 			Symbol:     "7974",  // 例: 任天堂
 			Side:       "short", // 売り
 			OrderType:  "market",
-			Condition:  "", // 現物
+			TradeType:  "", // 現物
 			Quantity:   100,
 			MarketCode: "00", // 東証
 		}

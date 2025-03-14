@@ -20,7 +20,7 @@ func TestPlaceOrder_SpotBuyMarketPayload(t *testing.T) {
 			Symbol:     "7974", // 例: 任天堂
 			Side:       "long", // "buy" から "long" に変更
 			OrderType:  "market",
-			Condition:  "", // 現物
+			TradeType:  "", // 現物
 			Quantity:   100,
 			MarketCode: "00", // 東証
 		}

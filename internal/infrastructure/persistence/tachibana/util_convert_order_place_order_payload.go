@@ -43,7 +43,7 @@ func ConvertOrderToPlaceOrderPayload(order *domain.Order, tc *TachibanaClientImp
 	//  OrderType から、現物/信用、新規/返済 を判定
 	switch order.OrderType {
 	case "market", "limit", "stop", "stop_limit": // 通常の注文（現物 or 信用新規）
-		if order.Condition == "credit_open" { // 信用新規
+		if order.TradeType == "credit_open" { // 信用新規
 			genkinShinyouKubun = "2" // 信用新規
 		} else { // "現物" or その他
 			genkinShinyouKubun = genkinShinyouKubunGenbutsu // 現物扱い

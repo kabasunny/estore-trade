@@ -21,7 +21,7 @@ func TestPlaceOrder_SpotBuyStopLimitPayload(t *testing.T) {
 			Symbol:                "7974",
 			Side:                  "long",
 			OrderType:             "stop_limit", // 通常＋逆指値
-			Condition:             "",
+			TradeType:             "",
 			Quantity:              100,
 			Price:                 10000.0, //逆指値価格
 			TriggerPrice:          9500.0,  //逆指値トリガー価格

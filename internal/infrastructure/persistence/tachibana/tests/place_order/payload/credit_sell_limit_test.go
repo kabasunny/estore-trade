@@ -21,7 +21,7 @@ func TestPlaceOrder_CreditSellLimitPayload(t *testing.T) {
 			Symbol:     "7974",  // 例: 任天堂
 			Side:       "short", // "sell" から "short" に変更
 			OrderType:  "limit",
-			Condition:  "credit_open", // 信用新規
+			TradeType:  "credit_open", // 信用新規
 			Quantity:   100,
 			Price:      9500.0, // 指値価格
 			MarketCode: "00",   // 東証

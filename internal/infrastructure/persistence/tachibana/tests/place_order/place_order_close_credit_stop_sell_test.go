@@ -29,7 +29,7 @@ func TestPlaceOrder_CloseCreditStopSell(t *testing.T) {
 			Symbol:     "7974", // 例: 任天堂
 			Side:       "long",
 			OrderType:  "market",
-			Condition:  "credit_open", // 信用新規
+			TradeType:  "credit_open", // 信用新規
 			Quantity:   100,
 			MarketCode: "00", // 東証
 		}
@@ -52,7 +52,7 @@ func TestPlaceOrder_CloseCreditStopSell(t *testing.T) {
 					Symbol:       p.Symbol,
 					Side:         "short", // 売り
 					OrderType:    "credit_close_stop",
-					Condition:    "",
+					TradeType:    "",
 					Quantity:     p.Quantity, // 全量返済
 					TriggerPrice: 9500.0,     // 逆指値トリガー価格
 					MarketCode:   "00",

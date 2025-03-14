@@ -20,7 +20,7 @@ func TestPlaceOrder_SpotBuyStopPayload(t *testing.T) {
 			Symbol:       "7974", // 例: 任天堂
 			Side:         "long",
 			OrderType:    "stop",
-			Condition:    "", // 現物
+			TradeType:    "", // 現物
 			Quantity:     100,
 			Price:        10000.0, // 逆指値価格（指値）
 			TriggerPrice: 9500.0,  // 逆指値トリガー価格

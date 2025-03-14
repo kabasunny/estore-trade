@@ -29,7 +29,7 @@ func TestPlaceOrder_CreditCloseStopBuy(t *testing.T) {
 			Symbol:     "7974", // 例: 任天堂
 			Side:       "short",
 			OrderType:  "market",
-			Condition:  "credit_open", // 信用新規
+			TradeType:  "credit_open", // 信用新規
 			Quantity:   100,
 			MarketCode: "00", // 東証
 		}
@@ -50,7 +50,7 @@ func TestPlaceOrder_CreditCloseStopBuy(t *testing.T) {
 					Symbol:       p.Symbol,            // 建玉の銘柄コード
 					Side:         "long",              // 買い
 					OrderType:    "credit_close_stop", // 信用返済逆指値.
-					Condition:    "",                  // 信用返済
+					TradeType:    "",                  // 信用返済
 					Quantity:     p.Quantity,          // 建玉の数量(全量返済).
 					TriggerPrice: 10500.0,             // 例: 逆指値トリガー価格(現在価格より高い価格).
 					MarketCode:   "00",                // 東証

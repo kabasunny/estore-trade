@@ -26,7 +26,7 @@ func TestPlaceOrder_CloseCreditMarketSell(t *testing.T) {
 			Symbol:     "7974", // 例: 任天堂
 			Side:       "long",
 			OrderType:  "market",
-			Condition:  "credit_open", // 信用新規
+			TradeType:  "credit_open", // 信用新規
 			Quantity:   100,
 			MarketCode: "00", // 東証
 		}

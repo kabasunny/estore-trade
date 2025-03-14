@@ -21,7 +21,7 @@ func TestPlaceOrder_CreditBuyStopLimitPayload(t *testing.T) {
 			Symbol:                "7974",        // 例: 任天堂
 			Side:                  "long",        // "buy" から "long" に変更
 			OrderType:             "stop_limit",  // 通常+逆指値
-			Condition:             "credit_open", // 信用新規
+			TradeType:             "credit_open", // 信用新規
 			Quantity:              100,
 			Price:                 10000.0, // 逆指値価格（指値）
 			TriggerPrice:          9500.0,  // 逆指値トリガー価格
@@ -67,7 +67,7 @@ func TestPlaceOrder_CreditBuyStopLimitPayload(t *testing.T) {
 			Symbol:                "7974",
 			Side:                  "long",
 			OrderType:             "stop_limit",
-			Condition:             "credit_open",
+			TradeType:             "credit_open",
 			Quantity:              100,
 			Price:                 9000.0, //トリガー前の指値
 			TriggerPrice:          9500.0,

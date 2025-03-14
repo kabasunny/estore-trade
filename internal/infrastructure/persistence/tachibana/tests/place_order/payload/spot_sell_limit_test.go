@@ -20,7 +20,7 @@ func TestPlaceOrder_SpotSellLimitPayload(t *testing.T) {
 			Symbol:     "7974",  // 例: 任天堂
 			Side:       "short", // 売り
 			OrderType:  "limit",
-			Condition:  "", // 現物
+			TradeType:  "", // 現物
 			Quantity:   100,
 			Price:      9500.0, // 指値価格
 			MarketCode: "00",   // 東証

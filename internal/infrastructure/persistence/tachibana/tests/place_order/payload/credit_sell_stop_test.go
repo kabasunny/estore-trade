@@ -22,7 +22,7 @@ func TestPlaceOrder_CreditSellStopPayload(t *testing.T) {
 			Symbol:       "7974",  // 例: 任天堂
 			Side:         "short", // "sell" から "short" に変更
 			OrderType:    "stop",
-			Condition:    "credit_open", // 信用新規
+			TradeType:    "credit_open", // 信用新規
 			Quantity:     100,
 			Price:        8000.0, // 逆指値価格（指値）
 			TriggerPrice: 9500.0, // 逆指値トリガー価格
@@ -67,7 +67,7 @@ func TestPlaceOrder_CreditSellStopPayload(t *testing.T) {
 			Symbol:       "7974",
 			Side:         "short",
 			OrderType:    "stop",
-			Condition:    "credit_open",
+			TradeType:    "credit_open",
 			Quantity:     100,
 			TriggerPrice: 9500.0,
 			Price:        0, // TriggerPriceに達したら成行き

@@ -27,7 +27,7 @@ func TestPlaceOrder_SpotMarketBuyWithStop(t *testing.T) {
 			Symbol:       "7974", // 例: 任天堂
 			Side:         "buy",
 			OrderType:    "stop", // ここが重要。　逆指値
-			Condition:    "",     //　現物
+			TradeType:    "",     //　現物
 			Quantity:     100,
 			TriggerPrice: 11000.0, // 逆指値条件価格 (例: 現在価格が10000円として、11000円以上になったら)
 			Price:        0,       // TriggerPriceに達したら、成行き
@@ -56,7 +56,7 @@ func TestPlaceOrder_SpotMarketBuyWithStop(t *testing.T) {
 			Symbol:       "invalid_code", // 無効な銘柄コード
 			Side:         "buy",
 			OrderType:    "stop",
-			Condition:    "",
+			TradeType:    "",
 			Quantity:     100,
 			TriggerPrice: 11000.0,
 			MarketCode:   "00",
@@ -77,7 +77,7 @@ func TestPlaceOrder_SpotMarketBuyWithStop(t *testing.T) {
 			Symbol:       "7974",
 			Side:         "invalid_side", // 無効なSide
 			OrderType:    "stop",
-			Condition:    "",
+			TradeType:    "",
 			Quantity:     100,
 			TriggerPrice: 11000.0,
 			MarketCode:   "00",
@@ -98,7 +98,7 @@ func TestPlaceOrder_SpotMarketBuyWithStop(t *testing.T) {
 			Symbol:       "7974",
 			Side:         "buy",
 			OrderType:    "stop",
-			Condition:    "",
+			TradeType:    "",
 			Quantity:     0, // 無効な数量
 			TriggerPrice: 11000.0,
 			MarketCode:   "00",
@@ -120,7 +120,7 @@ func TestPlaceOrder_SpotMarketBuyWithStop(t *testing.T) {
 			Symbol:       "7974",
 			Side:         "buy",
 			OrderType:    "stop",
-			Condition:    "",
+			TradeType:    "",
 			Quantity:     100,
 			TriggerPrice: 0, // 無効なトリガー価格
 			MarketCode:   "00",
@@ -138,7 +138,7 @@ func TestPlaceOrder_SpotMarketBuyWithStop(t *testing.T) {
 			Symbol:       "7974",
 			Side:         "buy",
 			OrderType:    "stop",
-			Condition:    "",
+			TradeType:    "",
 			Quantity:     100,
 			TriggerPrice: 11000.0,
 			MarketCode:   "00",
@@ -159,7 +159,7 @@ func TestPlaceOrder_SpotMarketBuyWithStop(t *testing.T) {
 			Symbol:       "7974",
 			Side:         "buy",
 			OrderType:    "stop",
-			Condition:    "",
+			TradeType:    "",
 			Quantity:     100,
 			TriggerPrice: 11000.0,
 			MarketCode:   "00",

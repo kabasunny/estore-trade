@@ -93,11 +93,9 @@ func (es *EventStream) parseEvent(message []byte) (*domain.OrderEvent, error) {
 						case "3":
 							event.Order.Side = "long"
 						case "5": //現渡
-							event.Order.Side = "sell"
-							event.Order.Condition = "delivery" //現渡
+							event.Order.Side = "short"
 						case "7": //現引
 							event.Order.Side = "long"
-							event.Order.Condition = "receive" //現引
 						default:
 							es.logger.Warn("Invalid p_BBKB value", zap.String("value", value))
 						}
@@ -117,68 +115,53 @@ func (es *EventStream) parseEvent(message []byte) (*domain.OrderEvent, error) {
 							continue
 						}
 						event.Order.Quantity = quantity
-					case "p_NT": // 通知種別
-						event.Order.OrderType = value
+					case "p_NT": // 通知種別  ★ここを修正★
+						event.Order.NotificationType = value // NotificationType に設定
 					case "p_ED": // 営業日
 						event.Order.CreatedAt, _ = time.Parse("20060102", value)
 					case "p_OON": // 親注文番号
 						// event.Order にフィールドがないため、処理しない
 
 					case "p_OT": // 注文種別
-						switch value {
-						case "1":
-							event.Order.OrderType = "parent"
-						case "2":
-							event.Order.OrderType = "child"
-						default:
-							event.Order.OrderType = "unknown"
-						}
+						// 使用しない
 
 					case "p_ST": // 商品種別
 						// event.Order にフィールドがないため、処理しない
 
-					case "p_MC": // 市場コード
-						event.Order.MarketCode = value
-
 					case "p_THKB": // 取引区分
 						switch value {
 						case "0":
-							event.Order.Condition = "spot"
+							event.Order.TradeType = "spot" // 現物
 						case "2":
-							event.Order.Condition = "credit_open"
+							event.Order.TradeType = "credit_open" // 信用新規 (制度)
 						case "4":
-							event.Order.Condition = "credit_close"
+							event.Order.TradeType = "credit_close" // 信用返済 (制度)
 						case "6":
-							event.Order.Condition = "credit_open"
+							event.Order.TradeType = "credit_open" // 信用新規 (一般)
 						case "8":
-							event.Order.Condition = "credit_close"
+							event.Order.TradeType = "credit_close" // 信用返済 (一般)
+						case "5": //現渡
+							event.Order.TradeType = "spot" //現渡
+						case "7": //現引
+							event.Order.TradeType = "spot" //現引
+						default:
+							es.logger.Warn("Invalid p_THKB value", zap.String("value", value))
 						}
 
 					case "p_CRSJ": // 執行条件
 						switch value {
 						case "0":
-							event.Order.Condition = ""
+							event.Order.ExecutionType = "" // なし
 						case "2":
-							event.Order.Condition = "opening"
+							event.Order.ExecutionType = "opening"
 						case "4":
-							event.Order.Condition = "closing"
+							event.Order.ExecutionType = "closing"
 						case "6":
-							event.Order.Condition = "market"
+							event.Order.ExecutionType = "market"
 						}
 
 					case "p_CRPRKB": // 注文値段区分
-						switch value {
-						case "0":
-							event.Order.Condition = ""
-						case "1":
-							event.Order.Condition = "market"
-						case "2":
-							event.Order.Condition = "limit"
-						case "3":
-							event.Order.Condition = "above_parent"
-						case "4":
-							event.Order.Condition = "below_parent"
-						}
+
 					case "p_CRTKSR": // 取消数量
 						canceledQuantity, err := strconv.Atoi(value)
 						if err != nil {
@@ -267,7 +250,6 @@ func (es *EventStream) parseEvent(message []byte) (*domain.OrderEvent, error) {
 						event.News.Body = value
 					}
 
-				//parseEvent関数内の該当部分を修正
 				case "SS": // システムステータス
 					fallthrough // SSとUSは共通の構造体を使用
 				case "US": // 運用ステータス
@@ -320,7 +302,6 @@ func (es *EventStream) parseEvent(message []byte) (*domain.OrderEvent, error) {
 							continue
 						}
 						//event.Market.CurrentPrice = value //string
-						//event.Market.CurrentPrice = fmt.Sprintf("%v", currentPrice)
 						event.Market.CurrentPrice = currentPrice // 直接代入
 
 					case "DPG": // 現在値前値比較
@@ -332,7 +313,6 @@ func (es *EventStream) parseEvent(message []byte) (*domain.OrderEvent, error) {
 							continue
 						}
 						//event.Market.Turnover = value //string
-						//event.Market.Turnover = fmt.Sprintf("%v", turnover)
 						event.Market.Turnover = turnover // 直接代入
 
 					case "BV", "GBV1", "GBV2", "GBV3", "GBV4", "GBV5", "GBV6", "GBV7", "GBV8", "GBV9", "GBV10": // 買気配数量
@@ -342,9 +322,7 @@ func (es *EventStream) parseEvent(message []byte) (*domain.OrderEvent, error) {
 							continue
 						}
 						//event.Market.BidQuantity = value //string
-						//event.Market.BidQuantity = fmt.Sprintf("%v", bidQuantity) // 複数回設定される可能性があるが、最後の値を保持
-						event.Market.BidQuantity = bidQuantity
-
+						event.Market.BidQuantity = bidQuantity // 複数回設定される可能性があるが、最後の値を保持
 					case "QBP", "GBP1", "GBP2", "GBP3", "GBP4", "GBP5", "GBP6", "GBP7", "GBP8", "GBP9", "GBP10": // 買気配値
 						bidPrice, err := strconv.ParseFloat(value, 64)
 						if err != nil {
@@ -352,9 +330,7 @@ func (es *EventStream) parseEvent(message []byte) (*domain.OrderEvent, error) {
 							continue
 						}
 						//event.Market.BidPrice = value //string
-						//event.Market.BidPrice = fmt.Sprintf("%v", bidPrice) // 複数回設定される可能性があるが、最後の値を保持
-						event.Market.BidPrice = bidPrice
-
+						event.Market.BidPrice = bidPrice // 複数回設定される可能性があるが、最後の値を保持
 					case "AV", "GAV1", "GAV2", "GAV3", "GAV4", "GAV5", "GAV6", "GAV7", "GAV8", "GAV9", "GAV10": // 売気配数量
 						askQuantity, err := strconv.Atoi(value)
 						if err != nil {
@@ -362,9 +338,7 @@ func (es *EventStream) parseEvent(message []byte) (*domain.OrderEvent, error) {
 							continue
 						}
 						//event.Market.AskQuantity = value //string
-						//event.Market.AskQuantity = fmt.Sprintf("%v", askQuantity) // 複数回設定される可能性があるが、最後の値を保持
-						event.Market.AskQuantity = askQuantity
-
+						event.Market.AskQuantity = askQuantity // 複数回設定される可能性があるが、最後の値を保持
 					case "QAP", "GAP1", "GAP2", "GAP3", "GAP4", "GAP5", "GAP6", "GAP7", "GAP8", "GAP9", "GAP10": // 売気配値
 						askPrice, err := strconv.ParseFloat(value, 64)
 						if err != nil {
@@ -372,9 +346,7 @@ func (es *EventStream) parseEvent(message []byte) (*domain.OrderEvent, error) {
 							continue
 						}
 						//event.Market.AskPrice = value
-						//event.Market.AskPrice = fmt.Sprintf("%v", askPrice) // 複数回設定される可能性があるが、最後の値を保持
-						event.Market.AskPrice = askPrice
-
+						event.Market.AskPrice = askPrice // 複数回設定される可能性があるが、最後の値を保持
 					case "DOP": // 始値
 						openingPrice, err := strconv.ParseFloat(value, 64)
 						if err != nil {
@@ -382,9 +354,7 @@ func (es *EventStream) parseEvent(message []byte) (*domain.OrderEvent, error) {
 							continue
 						}
 						//event.Market.OpeningPrice = value //string
-						//event.Market.OpeningPrice = fmt.Sprintf("%v", openingPrice)
 						event.Market.OpeningPrice = openingPrice
-
 					case "DHP": // 高値
 						highPrice, err := strconv.ParseFloat(value, 64)
 						if err != nil {
@@ -392,9 +362,7 @@ func (es *EventStream) parseEvent(message []byte) (*domain.OrderEvent, error) {
 							continue
 						}
 						//event.Market.HighPrice = value //string
-						//event.Market.HighPrice = fmt.Sprintf("%v", highPrice)
 						event.Market.HighPrice = highPrice
-
 					case "DLP": // 安値
 						lowPrice, err := strconv.ParseFloat(value, 64)
 						if err != nil {
@@ -402,7 +370,6 @@ func (es *EventStream) parseEvent(message []byte) (*domain.OrderEvent, error) {
 							continue
 						}
 						//event.Market.LowPrice = value //string
-						//event.Market.LowPrice = fmt.Sprintf("%v", lowPrice)
 						event.Market.LowPrice = lowPrice
 					case "DJ": // 売買代金
 						tradingVolume, err := strconv.ParseFloat(value, 64)
@@ -411,9 +378,7 @@ func (es *EventStream) parseEvent(message []byte) (*domain.OrderEvent, error) {
 							continue
 						}
 						//event.Market.TradingVolume = value //string
-						//event.Market.TradingVolume = fmt.Sprintf("%v", tradingVolume)
 						event.Market.TradingVolume = tradingVolume
-
 					case "DHF": // 日通し高値フラグ
 						event.Market.DailyHighStatus = value
 					case "DLF": // 日通し安値フラグ
