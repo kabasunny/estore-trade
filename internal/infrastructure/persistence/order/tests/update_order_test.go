@@ -24,7 +24,7 @@ func TestOrderRepository_UpdateOrder(t *testing.T) {
 	repo := order.NewOrderRepository(db) //order.を削除
 
 	order := &domain.Order{
-		ID:               "order-1",
+		UUID:             "order-1",
 		Symbol:           "7203",
 		Side:             "sell", // 更新
 		Status:           "filled",
@@ -41,7 +41,7 @@ func TestOrderRepository_UpdateOrder(t *testing.T) {
         SET symbol = $2, order_type = $3, side = $4, quantity = $5, price = $6, trigger_price = $7, filled_quantity = $8, average_price = $9, status = $10, tachibana_order_id = $11, commission = $12, expire_at = $13, updated_at = $14
         WHERE id = $1
     `)).WithArgs(
-		order.ID,
+		order.UUID,
 		order.Symbol,
 		order.OrderType,
 		order.Side,
@@ -74,7 +74,7 @@ func TestOrderRepository_UpdateOrder_Error(t *testing.T) {
 	repo := order.NewOrderRepository(db) //order.を削除
 
 	order := &domain.Order{
-		ID:               "order-1",
+		UUID:             "order-1",
 		Symbol:           "7203",
 		Side:             "sell", // 更新
 		Status:           "filled",
@@ -95,7 +95,7 @@ func TestOrderRepository_UpdateOrder_Error(t *testing.T) {
 	SET symbol = $2, order_type = $3, side = $4, quantity = $5, price = $6, trigger_price = $7, filled_quantity = $8, average_price = $9, status = $10, tachibana_order_id = $11, commission = $12, expire_at = $13, updated_at = $14
 	WHERE id = $1
 	`)).WithArgs(
-		order.ID,
+		order.UUID,
 		order.Symbol,
 		order.OrderType,
 		order.Side,

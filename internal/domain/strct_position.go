@@ -7,7 +7,7 @@ import (
 
 // Position ポジション
 type Position struct {
-	ID              string
+	ID              string // 立花証券APIにおける sTategyokuNumber (新規建玉番号) に対応
 	Symbol          string
 	Side            string // string のまま
 	Quantity        int

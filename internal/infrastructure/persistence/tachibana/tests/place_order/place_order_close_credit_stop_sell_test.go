@@ -69,7 +69,7 @@ func TestPlaceOrder_CloseCreditStopSell(t *testing.T) {
 					t.Fatalf("PlaceOrder for exitOrder failed: %v", err)
 				}
 				assert.NotNil(t, placedExitOrder)
-				assert.NotEmpty(t, placedExitOrder.ID)             // 注文ID
+				assert.NotEmpty(t, placedExitOrder.UUID)           // 注文ID
 				assert.Equal(t, "pending", placedExitOrder.Status) // ステータス
 
 				time.Sleep(1 * time.Second) // 少し待つ (逆指値注文はすぐには約定しない)

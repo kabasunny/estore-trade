@@ -13,7 +13,7 @@ func (r *orderRepository) CreateOrder(ctx context.Context, order *domain.Order) 
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
     `
 	_, err := r.db.ExecContext(ctx, query,
-		order.ID,
+		order.UUID,
 		order.Symbol,
 		order.OrderType,
 		order.Side,

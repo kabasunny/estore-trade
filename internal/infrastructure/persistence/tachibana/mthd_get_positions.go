@@ -55,6 +55,9 @@ func (tc *TachibanaClientImple) GetPositions(ctx context.Context) ([]domain.Posi
 		return nil, fmt.Errorf("get positions failed: %w", err)
 	}
 
+	// ★★★ レスポンス内容をすべて出力 (デバッグ) ★★★
+	fmt.Printf("GetPositions: raw response: %+v\n", response)
+
 	// レスポンスの処理 (sResultCode のチェック)
 	if resultCode, ok := response["sResultCode"].(string); ok && resultCode != "0" {
 		resultText, _ := response["sResultText"].(string) // エラーメッセージも取得 (存在しない場合も考慮)

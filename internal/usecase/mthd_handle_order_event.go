@@ -48,7 +48,7 @@ func (uc *tradingUsecase) HandleOrderEvent(ctx context.Context, event *domain.Or
 			return fmt.Errorf("order event of type US must have Order data")
 		}
 		// データベース上の注文ステータスを更新
-		if err := uc.orderRepo.UpdateOrderStatus(ctx, event.Order.ID, "canceled"); err != nil {
+		if err := uc.orderRepo.UpdateOrderStatus(ctx, event.Order.UUID, "canceled"); err != nil {
 			uc.logger.Error("Failed to update order status in DB", zap.Error(err))
 			return fmt.Errorf("failed to update order status in DB: %w", err)
 		}

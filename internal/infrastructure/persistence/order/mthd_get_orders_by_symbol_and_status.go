@@ -22,7 +22,7 @@ func (r *orderRepository) GetOrdersBySymbolAndStatus(ctx context.Context, symbol
 	for rows.Next() {
 		order := &domain.Order{}
 		err := rows.Scan(
-			&order.ID,
+			&order.UUID,
 			&order.Symbol,
 			&order.OrderType,
 			&order.Side,

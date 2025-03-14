@@ -24,7 +24,7 @@ func TestOrderRepository_GetOrder(t *testing.T) {
 	orderID := "order-1"
 
 	expectedOrder := &domain.Order{
-		ID:               orderID,
+		UUID:             orderID,
 		Symbol:           "7203",
 		Side:             "buy",
 		OrderType:        "market",
@@ -36,7 +36,7 @@ func TestOrderRepository_GetOrder(t *testing.T) {
 	}
 
 	rows := sqlmock.NewRows([]string{"id", "symbol", "order_type", "side", "quantity", "price", "trigger_price", "filled_quantity", "average_price", "status", "tachibana_order_id", "commission", "expire_at", "created_at", "updated_at"}).
-		AddRow(expectedOrder.ID, expectedOrder.Symbol, expectedOrder.OrderType, expectedOrder.Side,
+		AddRow(expectedOrder.UUID, expectedOrder.Symbol, expectedOrder.OrderType, expectedOrder.Side,
 			expectedOrder.Quantity, expectedOrder.Price, expectedOrder.TriggerPrice,
 			expectedOrder.FilledQuantity, expectedOrder.AveragePrice, expectedOrder.Status,
 			expectedOrder.TachibanaOrderID, expectedOrder.Commission, expectedOrder.ExpireAt,
@@ -47,7 +47,7 @@ func TestOrderRepository_GetOrder(t *testing.T) {
 	order, err := repo.GetOrder(context.Background(), orderID)
 	assert.NoError(t, err)
 	assert.NotNil(t, order)
-	assert.Equal(t, expectedOrder.ID, order.ID)
+	assert.Equal(t, expectedOrder.UUID, order.UUID)
 	assert.Equal(t, expectedOrder.Symbol, order.Symbol)
 
 	// 他のフィールドも必要に応じて比較

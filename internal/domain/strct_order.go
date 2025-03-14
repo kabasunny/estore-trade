@@ -4,9 +4,9 @@ import (
 	"time"
 )
 
-// Order 株式の注文
+// Order 株式の注文（既存の構造体を拡張）
 type Order struct {
-	ID               string    `json:"id"`                 // 注文ID (UUID)
+	UUID             string    `json:"id"`                 // 注文ID (UUID)
 	Symbol           string    `json:"symbol"`             // 銘柄コード
 	Side             string    `json:"side"`               // 売買区分 ("long" or "short")
 	OrderType        string    `json:"order_type"`         // 注文種別

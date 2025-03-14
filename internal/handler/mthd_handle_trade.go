@@ -50,5 +50,5 @@ func (h *TradingHandler) HandleTrade(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
 		return
 	}
-	h.logger.Info("Order placed successfully", zap.String("order_id", placedOrder.ID))
+	h.logger.Info("Order placed successfully", zap.String("order_id", placedOrder.UUID))
 }

@@ -29,7 +29,7 @@ func TestOrderRepository_CreateOrder(t *testing.T) {
 	repo := order.NewOrderRepository(db)
 
 	order := &domain.Order{
-		ID:               "order-1",
+		UUID:             "order-1",
 		Symbol:           "7203",
 		Side:             "buy",
 		OrderType:        "market",
@@ -46,7 +46,7 @@ func TestOrderRepository_CreateOrder(t *testing.T) {
         INSERT INTO orders (id, symbol, order_type, side, quantity, price, trigger_price, filled_quantity, average_price, status, tachibana_order_id, commission, expire_at, created_at, updated_at)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
     `)).WithArgs(
-		order.ID,
+		order.UUID,
 		order.Symbol,
 		order.OrderType,
 		order.Side,
@@ -82,7 +82,7 @@ func TestOrderRepository_CreateOrder_Error(t *testing.T) {
 	repo := order.NewOrderRepository(db)
 
 	order := &domain.Order{
-		ID:               "order-1",
+		UUID:             "order-1",
 		Symbol:           "7203",
 		Side:             "buy",
 		OrderType:        "market",
@@ -99,7 +99,7 @@ func TestOrderRepository_CreateOrder_Error(t *testing.T) {
         INSERT INTO orders (id, symbol, order_type, side, quantity, price, trigger_price, filled_quantity, average_price, status, tachibana_order_id, commission, expire_at, created_at, updated_at)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
     `)).WithArgs(
-		order.ID,
+		order.UUID,
 		order.Symbol,
 		order.OrderType,
 		order.Side,

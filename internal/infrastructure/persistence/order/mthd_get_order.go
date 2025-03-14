@@ -17,7 +17,7 @@ func (r *orderRepository) GetOrder(ctx context.Context, id string) (*domain.Orde
 
 	order := &domain.Order{}
 	err := row.Scan(
-		&order.ID,
+		&order.UUID,
 		&order.Symbol,
 		&order.OrderType,
 		&order.Side,

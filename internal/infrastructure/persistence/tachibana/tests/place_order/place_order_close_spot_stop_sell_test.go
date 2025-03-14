@@ -53,7 +53,7 @@ func TestPlaceOrder_SpotStopSell(t *testing.T) {
 		placedOrder, err := client.PlaceOrder(context.Background(), exitOrder)
 		assert.NoError(t, err)
 		assert.NotNil(t, placedOrder)
-		assert.NotEmpty(t, placedOrder.ID)
+		assert.NotEmpty(t, placedOrder.UUID)
 		assert.Equal(t, "pending", placedOrder.Status)
 
 	})

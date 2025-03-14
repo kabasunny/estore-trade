@@ -7,7 +7,7 @@ import (
 
 // Validate Order 構造体のバリデーション
 func (o *Order) Validate() error {
-	if o.ID == "" {
+	if o.UUID == "" {
 		return fmt.Errorf("order ID is required")
 	}
 	if o.Symbol == "" {

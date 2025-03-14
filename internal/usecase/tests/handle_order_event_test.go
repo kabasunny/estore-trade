@@ -25,11 +25,11 @@ func TestTradingUsecase_HandleOrderEvent(t *testing.T) {
 		mockClient := new(tachibana.MockTachibanaClient)
 		mockOrderRepo := new(usecase.MockOrderRepository)
 		uc := usecase.NewTradingUsecase(mockClient, testLogger, mockOrderRepo, nil, nil)
-		order := &domain.Order{ID: "order-1", Status: "filled"}
+		order := &domain.Order{UUID: "order-1", Status: "filled"}
 		event := &domain.OrderEvent{EventType: "EC", Order: order, Timestamp: time.Now()}
 
 		// UpdateOrderStatus が呼ばれることを期待
-		mockOrderRepo.On("UpdateOrderStatus", mock.Anything, order.ID, order.Status).Return(nil)
+		mockOrderRepo.On("UpdateOrderStatus", mock.Anything, order.UUID, order.Status).Return(nil)
 
 		err := uc.HandleOrderEvent(context.Background(), event)
 		assert.NoError(t, err)
@@ -43,11 +43,11 @@ func TestTradingUsecase_HandleOrderEvent(t *testing.T) {
 		mockClient := new(tachibana.MockTachibanaClient)
 		mockOrderRepo := new(usecase.MockOrderRepository)
 		uc := usecase.NewTradingUsecase(mockClient, testLogger, mockOrderRepo, nil, nil)
-		order := &domain.Order{ID: "order-1", Status: "filled"}
+		order := &domain.Order{UUID: "order-1", Status: "filled"}
 		event := &domain.OrderEvent{EventType: "EC", Order: order}
 
 		expectedError := errors.New("database error")
-		mockOrderRepo.On("UpdateOrderStatus", mock.Anything, order.ID, order.Status).Return(expectedError)
+		mockOrderRepo.On("UpdateOrderStatus", mock.Anything, order.UUID, order.Status).Return(expectedError)
 
 		err := uc.HandleOrderEvent(context.Background(), event)
 		assert.Error(t, err)

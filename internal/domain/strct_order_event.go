@@ -1,15 +1,14 @@
-// internal/domain/strct_order_event.go
 package domain
 
 import "time"
 
-// OrderEvent 注文イベント
+// OrderEvent は、立花証券からのイベント通知を表すドメインモデル
 type OrderEvent struct {
-	EventType string    // イベントタイプ ("EC", "NS", "SS", "US" など)
-	EventNo   int       // イベント番号 (p_ENO)
-	Order     *Order    // 更新された注文情報 (ECの場合)
-	Timestamp time.Time // イベント発生時刻 (p_date)
-	ErrNo     int       // エラー番号 (p_errno, 0以外の場合)
-	ErrMsg    string    // エラーメッセージ (p_err)
-	// EventData map[string]interface{} // イベントに関する追加情報 (今回は使用しない)
+	EventType string        // イベントタイプ ("EC", "NS", "SS", "US", "ST", "KP", "FD" など)
+	EventNo   string        // イベント番号 (p_ENO)
+	Order     *Order        // 更新された注文情報 (ECの場合)
+	News      *News         // ニュース情報 (NSの場合)
+	System    *SystemStatus // システムステータス (SS, US, ST, KPの場合)
+	Market    *Market       // 市場情報 (FDの場合)
+	Timestamp time.Time     // イベント発生時刻 (p_date)
 }

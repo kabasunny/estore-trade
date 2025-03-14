@@ -3,6 +3,7 @@ package tachibana_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"estore-trade/internal/infrastructure/persistence/tachibana"
@@ -20,6 +21,7 @@ func TestGetEventURL(t *testing.T) {
 
 		// GetEventURL 呼び出し
 		eventURL, err := client.GetEventURL()
+		fmt.Println(eventURL)
 		assert.NoError(t, err)
 		assert.NotEmpty(t, eventURL) // 空でない文字列が返される
 
@@ -41,4 +43,4 @@ func TestGetEventURL(t *testing.T) {
 	})
 }
 
-// go test -v ./internal/infrastructure/persistence/tachibana/tests/get_event_url_test.go
+// go test -v ./internal/infrastructure/persistence/tachibana/tests/event_stream/get_event_url_test.go

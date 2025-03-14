@@ -23,13 +23,13 @@ func TestOrderRepository_GetOrdersBySymbolAndStatus(t *testing.T) {
 	symbol := "7203"
 	status := "pending"
 	expectedOrders := []*domain.Order{
-		{ID: "order-1", Symbol: symbol, Side: "buy", OrderType: "market", Quantity: 100, Status: status},
-		{ID: "order-2", Symbol: symbol, Side: "sell", OrderType: "limit", Price: 1500, Quantity: 50, Status: status},
+		{UUID: "order-1", Symbol: symbol, Side: "buy", OrderType: "market", Quantity: 100, Status: status},
+		{UUID: "order-2", Symbol: symbol, Side: "sell", OrderType: "limit", Price: 1500, Quantity: 50, Status: status},
 	}
 
 	rows := sqlmock.NewRows([]string{"id", "symbol", "order_type", "side", "quantity", "price", "trigger_price", "filled_quantity", "average_price", "status", "tachibana_order_id", "commission", "expire_at", "created_at", "updated_at"})
 	for _, order := range expectedOrders {
-		rows.AddRow(order.ID, order.Symbol, order.OrderType, order.Side, order.Quantity, order.Price,
+		rows.AddRow(order.UUID, order.Symbol, order.OrderType, order.Side, order.Quantity, order.Price,
 			order.TriggerPrice, order.FilledQuantity, order.AveragePrice, order.Status,
 			order.TachibanaOrderID, order.Commission, order.ExpireAt, order.CreatedAt, order.UpdatedAt)
 	}
@@ -38,8 +38,8 @@ func TestOrderRepository_GetOrdersBySymbolAndStatus(t *testing.T) {
 	orders, err := repo.GetOrdersBySymbolAndStatus(context.Background(), symbol, status)
 	assert.NoError(t, err)
 	assert.Len(t, orders, 2)
-	assert.Equal(t, expectedOrders[0].ID, orders[0].ID)
-	assert.Equal(t, expectedOrders[1].ID, orders[1].ID)
+	assert.Equal(t, expectedOrders[0].UUID, orders[0].UUID)
+	assert.Equal(t, expectedOrders[1].UUID, orders[1].UUID)
 
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Errorf("there were unfulfilled expectations: %s", err)

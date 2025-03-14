@@ -37,7 +37,7 @@ func TestPlaceOrder_SpotMarketBuyWithStop(t *testing.T) {
 		placedOrder, err := client.PlaceOrder(context.Background(), order)
 		assert.NoError(t, err)
 		assert.NotNil(t, placedOrder)
-		assert.NotEmpty(t, placedOrder.ID)
+		assert.NotEmpty(t, placedOrder.UUID)
 		assert.Equal(t, "pending", placedOrder.Status)
 
 		// 1秒待機 (逆指値注文はすぐに約定しない場合があるため)

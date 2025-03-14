@@ -10,7 +10,7 @@ import (
 func (es *EventStream) sendEvent(event *domain.OrderEvent) {
 
 	select {
-	case es.eventCh <- *event: // チャネルに送信
+	case es.eventCh <- event: // チャネルに送信
 		es.logger.Info("Event sent to channel", zap.Any("event", event)) // チャネル送信成功ログ
 	case <-es.stopCh: // 停止シグナルを受け取ったら終了
 		es.logger.Info("Event stop channel")

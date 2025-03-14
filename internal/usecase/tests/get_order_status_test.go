@@ -22,7 +22,7 @@ func TestTradingUsecase_GetOrderStatus(t *testing.T) {
 	t.Run("valid order id", func(t *testing.T) {
 		mockClient := new(tachibana.MockTachibanaClient)
 		uc := usecase.NewTradingUsecase(mockClient, nil, nil, nil, nil)
-		expectedOrder := &domain.Order{ID: orderID, Status: "filled"}
+		expectedOrder := &domain.Order{UUID: orderID, Status: "filled"}
 		mockClient.On("GetOrderStatus", mock.Anything, orderID).Return(expectedOrder, nil)
 
 		order, err := uc.GetOrderStatus(context.Background(), orderID)

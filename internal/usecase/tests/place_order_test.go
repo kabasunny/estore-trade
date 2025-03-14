@@ -42,7 +42,7 @@ func TestTradingUsecase_PlaceOrder(t *testing.T) {
 		mockClient.On("GetSystemStatus").Return(domain.SystemStatus{SystemState: "1"})             // システム稼働中
 		mockClient.On("GetIssueMaster", "7203").Return(domain.IssueMaster{TradingUnit: 100}, true) // IssueMaster に戻す
 		mockClient.On("CheckPriceIsValid", "7203", 0.0, false).Return(true, nil)                   // 成行注文なので価格はチェックしない
-		mockClient.On("PlaceOrder", mock.Anything, order).Return(&domain.Order{ID: "order-id", Status: "pending"}, nil)
+		mockClient.On("PlaceOrder", mock.Anything, order).Return(&domain.Order{UUID: "order-id", Status: "pending"}, nil)
 		mockOrderRepo.On("CreateOrder", mock.Anything, mock.AnythingOfType("*domain.Order")).Return(nil)
 
 		// テスト対象のユースケースを作成
@@ -54,7 +54,7 @@ func TestTradingUsecase_PlaceOrder(t *testing.T) {
 		// 結果を検証
 		assert.NoError(t, err)
 		assert.NotNil(t, placedOrder)
-		assert.Equal(t, "order-id", placedOrder.ID)
+		assert.Equal(t, "order-id", placedOrder.UUID)
 		assert.Equal(t, "pending", placedOrder.Status)
 
 		// モックが期待通りに呼び出されたことを確認
@@ -179,7 +179,7 @@ func TestTradingUsecase_PlaceOrder(t *testing.T) {
 		uc := usecase.NewTradingUsecase(mockClient, testLogger, mockOrderRepo, nil, &config.Config{})
 
 		// 正常な注文が返ってくることを想定
-		expectedOrder := &domain.Order{ID: "order-id", Status: "pending"}
+		expectedOrder := &domain.Order{UUID: "order-id", Status: "pending"}
 
 		mockClient.On("GetSystemStatus").Return(domain.SystemStatus{SystemState: "1"})
 		mockClient.On("GetIssueMaster", "7203").Return(domain.IssueMaster{TradingUnit: 100}, true) //IssueMaster に戻す

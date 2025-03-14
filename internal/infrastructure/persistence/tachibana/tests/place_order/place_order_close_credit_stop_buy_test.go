@@ -66,7 +66,7 @@ func TestPlaceOrder_CreditCloseStopBuy(t *testing.T) {
 					t.Fatalf("PlaceOrder for exitOrder failed: %v", err) // assert.NoError の代わりに Fatalf を使う
 				}
 				assert.NotNil(t, placedOrder)
-				assert.NotEmpty(t, placedOrder.ID)
+				assert.NotEmpty(t, placedOrder.UUID)
 				assert.Equal(t, "pending", placedOrder.Status)
 
 				time.Sleep(1 * time.Second)

@@ -17,7 +17,7 @@ func TestOrder_Validate(t *testing.T) {
 			// 有効な注文のテストケース
 			name: "valid order",
 			order: Order{
-				ID:               "test-order-id",
+				UUID:             "test-order-id",
 				Symbol:           "7203",
 				Side:             "buy",
 				OrderType:        "market",
@@ -48,7 +48,7 @@ func TestOrder_Validate(t *testing.T) {
 			// 無効な注文のテストケース - Symbolが空
 			name: "invalid order - empty Symbol",
 			order: Order{
-				ID:               "test-order-id",
+				UUID:             "test-order-id",
 				Side:             "buy",
 				OrderType:        "market",
 				Quantity:         100,
@@ -63,7 +63,7 @@ func TestOrder_Validate(t *testing.T) {
 			// 無効な注文のテストケース - 無効なSide
 			name: "invalid order - invalid Side",
 			order: Order{
-				ID:               "test-order-id",
+				UUID:             "test-order-id",
 				Symbol:           "7203",
 				Side:             "invalid",
 				OrderType:        "market",
@@ -79,7 +79,7 @@ func TestOrder_Validate(t *testing.T) {
 			// 無効な注文のテストケース - 無効なOrderType
 			name: "invalid order - invalid OrderType",
 			order: Order{
-				ID:               "test-order-id",
+				UUID:             "test-order-id",
 				Symbol:           "7203",
 				Side:             "buy",
 				OrderType:        "invalid",
@@ -95,7 +95,7 @@ func TestOrder_Validate(t *testing.T) {
 			// 無効な注文のテストケース - Quantityが無効
 			name: "invalid order - invalid Quantity",
 			order: Order{
-				ID:               "test-order-id",
+				UUID:             "test-order-id",
 				Symbol:           "7203",
 				Side:             "buy",
 				OrderType:        "market",
@@ -111,7 +111,7 @@ func TestOrder_Validate(t *testing.T) {
 			// 無効な注文のテストケース - 指値注文で価格が0
 			name: "invalid order - limit order, price is zero",
 			order: Order{
-				ID:               "test-order-id",
+				UUID:             "test-order-id",
 				Symbol:           "7203",
 				Side:             "buy",
 				OrderType:        "limit", // 指値注文
@@ -128,7 +128,7 @@ func TestOrder_Validate(t *testing.T) {
 			// 無効な注文のテストケース - 逆指値注文でトリガー価格が0
 			name: "invalid order - stop order, TriggerPrice is zero",
 			order: Order{
-				ID:               "test-order-id",
+				UUID:             "test-order-id",
 				Symbol:           "7203",
 				Side:             "buy",
 				OrderType:        "stop", // 逆指値注文

@@ -14,7 +14,7 @@ func (r *orderRepository) UpdateOrder(ctx context.Context, order *domain.Order) 
         WHERE id = $1
     `
 	_, err := r.db.ExecContext(ctx, query,
-		order.ID,
+		order.UUID,
 		order.Symbol,
 		order.OrderType,
 		order.Side,

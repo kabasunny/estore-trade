@@ -13,6 +13,7 @@ import (
 	"estore-trade/internal/config"
 	"estore-trade/internal/domain"
 
+	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
 )
 
@@ -40,7 +41,9 @@ func CreateTestClient(t *testing.T, md *domain.MasterData) *TachibanaClientImple
 
 	// デモ環境かどうかのチェックと表示
 	if strings.Contains(cfg.TachibanaBaseURL, "demo") {
-		fmt.Println("APIのデモ環境に接続")
+		fmt.Println("APIの　デモ　環境に接続")
+	} else {
+		fmt.Println("APIの　本番　環境に接続")
 	}
 
 	// TachibanaClientImple インスタンスの作成
@@ -221,4 +224,92 @@ func (tc *TachibanaClientImple) GetPNoForTest() string {
 	tc.pNoMu.Lock()
 	defer tc.pNoMu.Unlock()
 	return strconv.FormatInt(tc.pNo, 10)
+}
+
+// GetConfig はテスト用に config.Config を取得します
+func (tc *TachibanaClientImple) GetConfig() *config.Config {
+	// .env ファイルのパスを修正
+	_, filename, _, ok := runtime.Caller(0)
+	if !ok {
+		panic("Failed to get caller information") // テストヘルパー内なので panic で良い
+	}
+	// test_helpers.go から見た .env の相対パス (プロジェクトルート)
+	envPath := filepath.Join(filepath.Dir(filename), "../../../../.env") // パスを修正
+
+	// 設定ファイルの読み込み
+	cfg, err := config.LoadConfig(envPath)
+	if err != nil {
+		panic(fmt.Sprintf("Error loading config: %v", err)) // テストヘルパー内なので panic
+	}
+	return cfg
+}
+
+// GetLogger はLoggerを取得します
+func (tc *TachibanaClientImple) GetLogger() *zap.Logger {
+	return tc.logger
+}
+
+// CallParseEvent は、EventStream の parseEvent メソッドを呼び出すためのヘルパー関数です。
+func CallParseEvent(es *EventStream, message []byte) (*domain.OrderEvent, error) {
+	return es.parseEvent(message)
+}
+
+// NewTestEventStream は、テスト用の EventStream インスタンスを作成するヘルパー関数です。
+func NewTestEventStream(logger *zap.Logger) *EventStream {
+	return &EventStream{
+		logger: logger, // 小文字の logger を使う
+		// 他のフィールドは必要に応じて初期化 (今回は不要)
+	}
+}
+
+// parseKPEvent は、KP メッセージをパースし、エラーがあればエラーを返す。
+func parseKPEvent(message []byte) (*domain.OrderEvent, error) {
+	fields := strings.Split(string(message), "\x01")
+
+	event := &domain.OrderEvent{EventType: "KP"} // EventType を KP で初期化
+	for _, field := range fields {
+		keyValue := strings.SplitN(field, "\x02", 2)
+		if len(keyValue) != 2 {
+			continue // キーと値のペアでない場合はスキップ
+		}
+		key, value := keyValue[0], keyValue[1]
+
+		switch key {
+		case "p_no":
+			event.EventNo = value
+		case "p_date":
+			t, err := time.Parse("2006.01.02-15:04:05.000", value)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse p_date: %w", err)
+			}
+			event.Timestamp = t
+		case "p_errno":
+			//数値に変換して、0ならエラーなし
+			code, err := strconv.Atoi(value)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse p_errno to int: %w", err)
+			}
+			if code != 0 {
+				if event.System == nil {
+					event.System = &domain.SystemStatus{}
+				}
+				event.System.ErrNo = value
+			}
+		case "p_err":
+			if event.System == nil {
+				event.System = &domain.SystemStatus{}
+			}
+			event.System.ErrMsg = value
+		case "p_cmd": //念の為
+			if value != "KP" {
+				return nil, fmt.Errorf("unexpected event type: %s", value)
+			}
+		}
+	}
+	return event, nil
+}
+
+// CallParseKPEvent は、テスト用に parseKPEvent メソッドを呼び出すためのヘルパー関数です。
+func CallParseKPEvent(es *EventStream, message []byte) (*domain.OrderEvent, error) {
+	return parseKPEvent(message)
 }

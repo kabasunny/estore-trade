@@ -46,7 +46,7 @@ func (uc *tradingUsecase) PlaceOrder(ctx context.Context, order *domain.Order) (
 		uc.logger.Error("立花証券API注文実行に失敗", zap.Error(err))
 		return nil, err
 	}
-	uc.logger.Info("Order placed successfully", zap.String("order_id", placedOrder.ID))
+	uc.logger.Info("Order placed successfully", zap.String("order_id", placedOrder.UUID))
 
 	// DBに注文情報を保存 (orderRepo を使用)
 	if err := uc.orderRepo.CreateOrder(ctx, placedOrder); err != nil {
