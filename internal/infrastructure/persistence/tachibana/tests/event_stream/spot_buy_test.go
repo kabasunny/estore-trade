@@ -31,7 +31,7 @@ func TestEventStreamSpotBuy(t *testing.T) {
 
 		// EventStream の開始 (ゴルーチンで実行)
 		go func() {
-			err := eventStream.Start()
+			err := eventStream.Start(ctx)
 			if err != nil {
 				t.Errorf("EventStream Start returned error: %v", err) //エラーの場合は、テストを停止
 			}

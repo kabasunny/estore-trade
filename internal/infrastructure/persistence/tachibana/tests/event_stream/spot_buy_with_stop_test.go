@@ -26,7 +26,7 @@ func TestEventStreamSpotBuyWithStopSeparate(t *testing.T) {
 		eventStream := tachibana.NewEventStream(client, client.GetConfig(), client.GetLogger(), eventCh)
 
 		go func() {
-			err := eventStream.Start()
+			err := eventStream.Start(ctx)
 			if err != nil {
 				t.Errorf("EventStream Start returned error: %v", err)
 			}

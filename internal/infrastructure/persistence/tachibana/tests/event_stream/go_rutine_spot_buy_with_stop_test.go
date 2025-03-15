@@ -37,7 +37,7 @@ func TestEventStreamSpotBuyWithStopSeparateGoRutine(t *testing.T) {
 		var buyEvent *domain.OrderEvent
 
 		go func() {
-			err := eventStream.Start()
+			err := eventStream.Start(ctx)
 			if err != nil {
 				errCh <- fmt.Errorf("EventStream Start returned error: %v", err)
 				return //goroutineを終了

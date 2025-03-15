@@ -26,9 +26,11 @@ func main() {
 
 	errCh := make(chan error, 1) // エラーチャネル
 
+	ctx := context.Background()
+
 	// EventStream の開始 (ゴルーチンで実行)
 	go func() { // EventStreamの開始
-		if err := app.EventStream.Start(); err != nil { //app経由で呼び出し
+		if err := app.EventStream.Start(ctx); err != nil { //app経由で呼び出し
 			app.Logger.Error("EventStream error", zap.Error(err))
 			errCh <- err
 		}

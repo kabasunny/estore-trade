@@ -1,6 +1,7 @@
 package parse_event_test
 
 import (
+	"strings"
 	"testing"
 
 	"estore-trade/internal/infrastructure/persistence/tachibana"
@@ -10,9 +11,18 @@ import (
 )
 
 func TestParseEventEC_UnknownBBKB(t *testing.T) {
-	message := []byte("p_cmd^BEC^Ap_ON^B12345^Ap_IC^B6758^Ap_BBKB^B9^Ap_ODST^B0") // 未知のBBKB
+	// 元のメッセージ (人間が読める形式)
+	originalMessage := "p_cmd^BEC^Ap_ON^B12345^Ap_IC^B6758^Ap_BBKB^B9^Ap_ODST^B0" // 未知のBBKB
 
-	logger, _ := zap.NewDevelopment()
+	// 制御文字をエスケープシーケンスに置換
+	replacer := strings.NewReplacer("^A", "\x01", "^B", "\x02")
+	replacedMessage := replacer.Replace(originalMessage)
+	message := []byte(replacedMessage)
+
+	logger, err := zap.NewDevelopment()
+	if err != nil {
+		t.Fatalf("Failed to create logger: %v", err)
+	}
 	es := tachibana.NewTestEventStream(logger)
 
 	event, err := tachibana.CallParseEvent(es, message)
@@ -21,7 +31,7 @@ func TestParseEventEC_UnknownBBKB(t *testing.T) {
 	assert.NotNil(t, event)
 	assert.Equal(t, "EC", event.EventType)
 	assert.NotNil(t, event.Order)
-	assert.Equal(t, "", tachibana.GetOrderSide(event.Order)) // 不明なBBKBの場合は空文字列 (またはデフォルト値)
+	assert.Equal(t, "", event.Order.Side) // 不明なBBKBの場合は空文字列 (またはデフォルト値)
 
 }
 

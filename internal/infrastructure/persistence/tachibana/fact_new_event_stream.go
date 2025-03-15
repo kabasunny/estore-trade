@@ -17,6 +17,7 @@ func NewEventStream(client TachibanaClient, cfg *config.Config, logger *zap.Logg
 		logger:          logger,
 		eventCh:         eventCh,
 		stopCh:          make(chan struct{}),
-		conn:            &http.Client{Timeout: 60 * time.Second}, // 長めのタイムアウトを設定
+		conn:            &http.Client{}, // 長めのタイムアウトを設定
+		lastReceived:    time.Now(),     // 初期値として現在時刻を設定
 	}
 }

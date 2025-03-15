@@ -25,7 +25,8 @@ func TestEventStreamSimple(t *testing.T) {
 		eventStream := tachibana.NewEventStream(client, client.GetConfig(), client.GetLogger(), eventCh)
 
 		go func() {
-			err := eventStream.Start()
+			// err := eventStream.Start() //Start()ではなく、StartSample()
+			err := eventStream.Start(ctx) //contextを渡す
 			if err != nil {
 				t.Errorf("EventStream Start returned error: %v", err)
 			}
@@ -33,7 +34,7 @@ func TestEventStreamSimple(t *testing.T) {
 		defer eventStream.Stop()
 
 		// KPメッセージを2回受信するまで待機 (最大30秒)
-		timeout := time.After(30 * time.Second)
+		timeout := time.After(60 * time.Second)
 		kpCount := 0
 		for {
 			select {

@@ -14,6 +14,6 @@ type tradingUsecase struct {
 	logger          *zap.Logger
 	orderRepo       domain.OrderRepository
 	accountRepo     domain.AccountRepository
-	eventCh         chan domain.OrderEvent
+	eventCh         chan *domain.OrderEvent
 	config          *config.Config // configへの参照を保持
 }

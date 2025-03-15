@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"time"
 
 	"go.uber.org/zap"
 	"golang.org/x/text/encoding/japanese"
@@ -62,5 +63,6 @@ func (es *EventStream) processResponseBody(body io.Reader) error {
 		case <-es.stopCh: //停止
 			return nil
 		}
+		es.setLastReceived(time.Now()) // ★ 最終受信時刻を更新 ★
 	}
 }
