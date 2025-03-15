@@ -11,7 +11,7 @@ import (
 
 // StartSample は EVENT I/F への接続を確立し、メッセージ受信ループを開始 (サンプル実装)
 func (es *EventStream) Start(ctx context.Context) error {
-	baseEventURL, err := es.tachibanaClient.GetEventURL()
+	baseEventURL, err := es.tachibanaClient.getEventURL(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get event URL: %w", err)
 	}
@@ -25,7 +25,7 @@ func (es *EventStream) Start(ctx context.Context) error {
 	values := url.Values{}
 	values.Add("p_rid", es.config.EventRid)
 	values.Add("p_board_no", es.config.EventBoardNo)
-	values.Add("p_eno", "0")
+	values.Add("p_eno", es.config.EventNo)
 	values.Add("p_evt_cmd", es.config.EventEvtCmd)
 	eventURL.RawQuery = values.Encode()
 

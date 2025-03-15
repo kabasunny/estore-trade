@@ -1,10 +1,13 @@
 // internal/infrastructure/persistence/tachibana/mthd_get_system_status.go
 package tachibana
 
-import "estore-trade/internal/domain"
+import (
+	"context"
+	"estore-trade/internal/domain"
+)
 
 // GetSystemStatus はシステムステータスを取得します。
-func (tc *TachibanaClientImple) GetSystemStatus() domain.SystemStatus {
+func (tc *TachibanaClientImple) GetSystemStatus(ctx context.Context) domain.SystemStatus {
 	tc.mu.RLock()
 	defer tc.mu.RUnlock()
 

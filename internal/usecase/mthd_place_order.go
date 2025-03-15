@@ -15,13 +15,13 @@ func (uc *tradingUsecase) PlaceOrder(ctx context.Context, order *domain.Order) (
 	uc.logger.Info("Placing order", zap.Any("order", order))
 
 	// システムの稼働状態を確認
-	systemStatus := uc.tachibanaClient.GetSystemStatus()
+	systemStatus := uc.tachibanaClient.GetSystemStatus(ctx)
 	if systemStatus.SystemState != "1" { // システム状態  0：閉局 1：開局 2：一時停止
 		return nil, fmt.Errorf("system is not in service")
 	}
 
 	// 銘柄情報のチェック
-	issue, ok := uc.tachibanaClient.GetIssueMaster(order.Symbol)
+	issue, ok := uc.tachibanaClient.GetIssueMaster(ctx, order.Symbol)
 	if !ok {
 		return nil, fmt.Errorf("invalid issue code: %s", order.Symbol)
 	}
@@ -32,7 +32,7 @@ func (uc *tradingUsecase) PlaceOrder(ctx context.Context, order *domain.Order) (
 	}
 
 	// 呼値のチェック (tachibana パッケージの関数を使用)
-	isValid, err := uc.tachibanaClient.CheckPriceIsValid(order.Symbol, order.Price, false) // 第3引数は isNextDay (当日なので false)
+	isValid, err := uc.tachibanaClient.CheckPriceIsValid(ctx, order.Symbol, order.Price, false) // 第3引数は isNextDay (当日なので false)
 	if err != nil {
 		return nil, fmt.Errorf("error checking price validity: %w", err)
 	}

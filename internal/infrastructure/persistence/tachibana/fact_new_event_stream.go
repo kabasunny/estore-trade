@@ -12,8 +12,8 @@ import (
 // NewEventStream は EventStream の新しいインスタンスを作成
 func NewEventStream(client TachibanaClient, cfg *config.Config, logger *zap.Logger, eventCh chan<- *domain.OrderEvent) *EventStream {
 	return &EventStream{
-		tachibanaClient: client,
-		config:          cfg, // configをセット
+		tachibanaClient: client.(*TachibanaClientImple), // 型アサーション
+		config:          cfg,                            // configをセット
 		logger:          logger,
 		eventCh:         eventCh,
 		stopCh:          make(chan struct{}),

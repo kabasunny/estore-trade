@@ -2,6 +2,7 @@
 package tachibana
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 	"runtime"
@@ -247,6 +248,12 @@ func (tc *TachibanaClientImple) GetConfig() *config.Config {
 // GetLogger はLoggerを取得します
 func (tc *TachibanaClientImple) GetLogger() *zap.Logger {
 	return tc.logger
+}
+
+// GetEventURL はLoggerを取得します
+func (tc *TachibanaClientImple) GetEventURLTest(ctx context.Context) (string, error) {
+	url, err := tc.getEventURL(ctx)
+	return url, err
 }
 
 // CallParseEvent は、EventStream の parseEvent メソッドを呼び出すためのヘルパー関数です。

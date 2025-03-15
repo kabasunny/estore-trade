@@ -7,9 +7,9 @@ import (
 )
 
 // 指定された注文IDの注文状況を取得する
-func (uc *tradingUsecase) GetOrderStatus(ctx context.Context, orderID string) (*domain.Order, error) {
+func (uc *tradingUsecase) GetOrderStatus(ctx context.Context, orderID string, orderDate string) (*domain.Order, error) {
 	// APIクライアントを呼び出して注文状況を取得
-	orderStatus, err := uc.tachibanaClient.GetOrderStatus(ctx, orderID)
+	orderStatus, err := uc.tachibanaClient.GetOrderStatus(ctx, orderID, orderDate) // 日付も指定する
 	if err != nil {
 		return nil, err
 	}

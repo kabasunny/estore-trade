@@ -13,7 +13,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// CancelOrder は注文をキャンセルします。
+// CancelOrder は注文をキャンセル
 func (tc *TachibanaClientImple) CancelOrder(ctx context.Context, orderID string) error {
 	payload := map[string]string{
 		"sCLMID":          clmidCancelOrder,

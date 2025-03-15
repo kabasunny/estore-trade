@@ -1,12 +1,13 @@
 package tachibana
 
 import (
+	"context"
 	"estore-trade/internal/domain"
 	"fmt"
 )
 
 // GetIssueMaster は銘柄コードに対応する銘柄情報を返す
-func (tc *TachibanaClientImple) GetIssueMaster(issueCode string) (domain.IssueMaster, bool) {
+func (tc *TachibanaClientImple) GetIssueMaster(ctx context.Context, issueCode string) (domain.IssueMaster, bool) {
 	tc.mu.RLock()
 	defer tc.mu.RUnlock()
 

@@ -1,12 +1,13 @@
 package tachibana
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 )
 
 // CheckPriceIsValid は指定された価格が正当であるかを確認
-func (tc *TachibanaClientImple) CheckPriceIsValid(issueCode string, price float64, isNextDay bool) (bool, error) {
+func (tc *TachibanaClientImple) CheckPriceIsValid(ctx context.Context, issueCode string, price float64, isNextDay bool) (bool, error) {
 	// fmt.Println("AAAAAAAAAAAAAAAAAA")
 	// priceが0以下の場合はエラー
 	if price <= 0 {

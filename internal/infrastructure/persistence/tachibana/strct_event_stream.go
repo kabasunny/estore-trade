@@ -11,7 +11,7 @@ import (
 )
 
 type EventStream struct {
-	tachibanaClient TachibanaClient
+	tachibanaClient *TachibanaClientImple
 	config          *config.Config // configへの参照を保持
 	logger          *zap.Logger
 	eventCh         chan<- *domain.OrderEvent // 修正: 送信専用チャネル

@@ -11,10 +11,10 @@ import (
 )
 
 // Start は EVENT I/F への接続を確立し、メッセージ受信ループを開始
-func (es *EventStream) startUnuse() error {
+func (es *EventStream) startUnuse(ctx context.Context) error {
 	fmt.Println("(es *EventStream) Start()")
 
-	baseEventURL, err := es.tachibanaClient.GetEventURL() //event_stream.goで定義したinterfaceを利用
+	baseEventURL, err := es.tachibanaClient.getEventURL(ctx) //event_stream.goで定義したinterfaceを利用
 	if err != nil {
 		return fmt.Errorf("failed to get event URL: %w", err)
 	}

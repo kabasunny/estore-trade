@@ -1,12 +1,13 @@
 package tachibana
 
 import (
+	"context"
 	"fmt"
 	"time"
 )
 
-// GetEventURL はキャッシュされた仮想URL（EVENT）を返す
-func (tc *TachibanaClientImple) GetEventURL() (string, error) {
+// getEventURL はキャッシュされた仮想URL（EVENT）を返す
+func (tc *TachibanaClientImple) getEventURL(ctx context.Context) (string, error) {
 	tc.mu.RLock()
 	defer tc.mu.RUnlock()
 	if time.Now().Before(tc.expiry) && tc.loggined && tc.eventURL != "" {

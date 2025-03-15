@@ -20,7 +20,7 @@ func TestGetEventURL(t *testing.T) {
 		assert.NoError(t, err)
 
 		// GetEventURL 呼び出し
-		eventURL, err := client.GetEventURL()
+		eventURL, _ := client.GetEventURLTest(context.Background())
 		fmt.Println(eventURL)
 		assert.NoError(t, err)
 		assert.NotEmpty(t, eventURL) // 空でない文字列が返される
@@ -34,7 +34,7 @@ func TestGetEventURL(t *testing.T) {
 		// 	client := tachibana.CreateTestClient(t, nil) //ログインしていない状態
 
 		// GetEventURL 呼び出し
-		_, err := client.GetEventURL()
+		_, err := client.GetEventURLTest(context.Background())
 		assert.Error(t, err) // エラーが発生する
 
 		// // ログアウト (ログインしていないので不要)

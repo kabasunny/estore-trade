@@ -70,7 +70,7 @@ func (es *EventStream) startEventLoop(ctx context.Context, req *http.Request) {
 				backoff := time.Duration(1<<uint(retryCount-1)) * initialBackoff
 				select {
 				case <-time.After(backoff):
-					continue // リトライ
+					continue // リトライ  // リトライ処理はログインを伴った方が良いかもしれない
 				case <-ctx.Done():
 					es.logger.Info("Stopping EventStream, context cancelled during timeout backoff")
 					return

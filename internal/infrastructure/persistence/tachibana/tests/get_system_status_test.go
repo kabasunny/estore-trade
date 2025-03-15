@@ -22,7 +22,7 @@ func TestGetSystemStatus(t *testing.T) {
 		assert.NoError(t, err)
 
 		// GetSystemStatus 呼び出し (DownloadMasterData 前)
-		systemStatus := client.GetSystemStatus()
+		systemStatus := client.GetSystemStatus(context.Background())
 
 		// systemStatus が初期値であることを確認
 		assert.Empty(t, systemStatus.SystemStatusKey)
@@ -50,7 +50,7 @@ func TestGetSystemStatus(t *testing.T) {
 		assert.NoError(t, err)
 
 		// GetSystemStatus 呼び出し
-		systemStatus := client.GetSystemStatus()
+		systemStatus := client.GetSystemStatus(context.Background())
 
 		// systemStatus の検証 (具体的な値はデモ環境に依存)
 		assert.NotEmpty(t, systemStatus.SystemStatusKey)

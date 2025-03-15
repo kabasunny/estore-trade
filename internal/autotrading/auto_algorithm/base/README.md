@@ -41,3 +41,31 @@
 
 -   **純粋なアルゴリズム**: このパッケージは、自動売買の判断ロジックのみに特化
 -   **拡張性**: 新しい自動売買アルゴリズムを追加する場合は、`AutoTradingAlgorithm` 構造体を拡張し、`GenerateSignal` や `CalculatePosition` メソッドを実装
+
+
+
+
+
+
+
+
+autotrading/
+├── auto_algorithm/
+│   ├── base/                          # 共通の基底クラスやインターフェース
+│   │   ├── algorithm.go               # 自動売買アルゴリズムのインターフェース
+│   │   ├── position_calculator.go    # ポジション計算のインターフェース/基底クラス
+│   │   └── signal_generator.go       # シグナル生成のインターフェース/基底クラス
+│   ├── day_trade/                     # デイトレード戦略
+│   │   ├── algorithm_day_trade.go     # デイトレードアルゴリズムの具象クラス
+│   │   ├── position_day_trade.go      # デイトレード用のポジション計算
+│   │   └── signal_day_trade.go        # デイトレード用のシグナル生成
+│   ├── swing_trade/                   # スイングトレード戦略
+│   │   ├── algorithm_swing_trade.go   # スイングトレードアルゴリズムの具象クラス
+│   │   ├── position_swing_trade.go    # スイングトレード用のポジション計算
+│   │   └── signal_swing_trade.go      # スイングトレード用のシグナル生成
+│   └── factory/                      # アルゴリズムのファクトリ
+│        └── algorithm_factory.go        # アルゴリズム生成のファクトリ関数
+├── auto_usecase/                    # (既存) 自動売買ユースケース
+│   ├── ...
+└── strategy_config/                 # (新規) 戦略設定
+    └── config.go
