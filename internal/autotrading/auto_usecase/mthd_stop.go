@@ -1,6 +1,11 @@
+// internal/autotrading/auto_usecase/mthd_stop.go
 package auto_usecase
 
+import "fmt"
+
 func (a *autoTradingUsecase) Stop() error {
-	// 必要に応じて停止処理を実装
+	// OrderEventDispatcher から登録解除
+	a.dispatcher.Unsubscribe(a.subscriberID, a.eventCh)
+	fmt.Println("(a *autoTradingUsecase) Stop()")
 	return nil
 }

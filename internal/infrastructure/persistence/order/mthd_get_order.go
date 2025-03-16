@@ -3,41 +3,21 @@ package order
 
 import (
 	"context"
-	"database/sql"
+	"errors"
 	"estore-trade/internal/domain"
+	"fmt"
+
+	"gorm.io/gorm"
 )
 
 func (r *orderRepository) GetOrder(ctx context.Context, id string) (*domain.Order, error) {
-	query := `
-        SELECT id, symbol, order_type, side, quantity, price, trigger_price, filled_quantity, average_price, status, tachibana_order_id, commission, expire_at, created_at, updated_at
-        FROM orders
-        WHERE id = $1
-    `
-	row := r.db.QueryRowContext(ctx, query, id)
-
 	order := &domain.Order{}
-	err := row.Scan(
-		&order.UUID,
-		&order.Symbol,
-		&order.OrderType,
-		&order.Side,
-		&order.Quantity,
-		&order.Price,
-		&order.TriggerPrice,
-		&order.FilledQuantity,
-		&order.AveragePrice,
-		&order.Status,
-		&order.TachibanaOrderID,
-		&order.Commission,
-		&order.ExpireAt,
-		&order.CreatedAt,
-		&order.UpdatedAt,
-	)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, nil
+	result := r.db.WithContext(ctx).First(order, "uuid = ?", id) // First を使用
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, nil // 見つからない場合は nil, nil を返す
 		}
-		return nil, err
+		return nil, fmt.Errorf("failed to get order: %w", result.Error)
 	}
 	return order, nil
 }

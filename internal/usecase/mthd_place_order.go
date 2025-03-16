@@ -9,10 +9,15 @@ import (
 	"go.uber.org/zap"
 )
 
-// APIを使用して注文を実行し、必要な事前チェックを行う
+// PlaceOrder は、APIを使用して注文を実行し、必要な事前チェックを行う
 func (uc *tradingUsecase) PlaceOrder(ctx context.Context, order *domain.Order) (*domain.Order, error) {
 	// 注文のログを出力
 	uc.logger.Info("Placing order", zap.Any("order", order))
+
+	// 注文のバリデーション
+	if err := order.Validate(); err != nil { //ドメイン層のバリデート
+		return nil, fmt.Errorf("invalid order: %w", err)
+	}
 
 	// システムの稼働状態を確認
 	systemStatus := uc.tachibanaClient.GetSystemStatus(ctx)
@@ -46,7 +51,7 @@ func (uc *tradingUsecase) PlaceOrder(ctx context.Context, order *domain.Order) (
 		uc.logger.Error("立花証券API注文実行に失敗", zap.Error(err))
 		return nil, err
 	}
-	uc.logger.Info("Order placed successfully", zap.String("order_id", placedOrder.UUID))
+	uc.logger.Info("Order placed successfully", zap.String("order_id", placedOrder.TachibanaOrderID))
 
 	// DBに注文情報を保存 (orderRepo を使用)
 	if err := uc.orderRepo.CreateOrder(ctx, placedOrder); err != nil {

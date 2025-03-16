@@ -15,7 +15,6 @@ func NewTradingUsecase(tachibanaClient tachibana.TachibanaClient, logger *zap.Lo
 		logger:          logger,
 		orderRepo:       orderRepo,
 		accountRepo:     accountRepo,
-		eventCh:         make(chan *domain.OrderEvent),
 		config:          cfg, // configをセット
 	}
 }

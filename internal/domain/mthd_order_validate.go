@@ -13,7 +13,7 @@ func (o *Order) Validate() error {
 	if o.Symbol == "" {
 		return fmt.Errorf("symbol is required")
 	}
-	if o.Side != "buy" && o.Side != "sell" {
+	if o.Side != "long" && o.Side != "short" {
 		return fmt.Errorf("invalid side: %s", o.Side)
 	}
 	if o.OrderType != "market" && o.OrderType != "limit" && o.OrderType != "stop" && o.OrderType != "stop_limit" {

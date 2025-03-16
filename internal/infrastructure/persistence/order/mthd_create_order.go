@@ -4,30 +4,19 @@ package order
 import (
 	"context"
 	"estore-trade/internal/domain"
-	"time"
+	"fmt"
 )
 
-func (r *orderRepository) CreateOrder(ctx context.Context, order *domain.Order) error {
-	query := `
-        INSERT INTO orders (id, symbol, order_type, side, quantity, price, trigger_price, filled_quantity, average_price, status, tachibana_order_id, commission, expire_at, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-    `
-	_, err := r.db.ExecContext(ctx, query,
-		order.UUID,
-		order.Symbol,
-		order.OrderType,
-		order.Side,
-		order.Quantity,
-		order.Price,
-		order.TriggerPrice,
-		order.FilledQuantity,
-		order.AveragePrice,
-		order.Status,
-		order.TachibanaOrderID,
-		order.Commission,
-		order.ExpireAt,
-		time.Now(),
-		time.Now(),
-	)
-	return err
+func (r *orderRepository) CancelOrder(ctx context.Context, orderID string) error {
+	// GORM を使って、注文のステータスを "canceled" に更新
+	result := r.db.WithContext(ctx).Model(&domain.Order{}).Where("uuid = ?", orderID).Update("status", "canceled")
+	if result.Error != nil {
+		return fmt.Errorf("failed to cancel order: %w", result.Error)
+	}
+	// 更新された行がない場合は、エラー
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("order not found: %s", orderID)
+	}
+
+	return nil
 }

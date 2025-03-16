@@ -1,4 +1,4 @@
-// internal/usecase/tests/mocks_test.go
+// internal/usecase/mocks_test.go
 package usecase
 
 import (

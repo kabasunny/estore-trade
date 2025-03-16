@@ -57,12 +57,9 @@ func (es *EventStream) processResponseBody(body io.Reader) error {
 			continue
 		}
 
-		// イベントを eventCh に送信 (フィルタリングはStartメソッドで行う)
-		select {
-		case es.eventCh <- event: //値を送信
-		case <-es.stopCh: //停止
-			return nil
-		}
+		// OrderEventDispatcher を使ってイベントをディスパッチ
+		es.dispatcher.Dispatch(event)
+
 		es.setLastReceived(time.Now()) // ★ 最終受信時刻を更新 ★
 	}
 }

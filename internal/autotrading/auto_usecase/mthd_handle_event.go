@@ -1,3 +1,5 @@
+// internal/autotrading/auto_usecase/mthd_handle_event.go
+
 package auto_usecase // 変更
 
 import (
@@ -28,15 +30,23 @@ func (a *autoTradingUsecase) HandleEvent(event domain.OrderEvent) {
 		order := domain.Order{ // domain.Order を作成
 			// ... position の情報に基づいて必要な値を設定 ...
 			// 例:
-			Symbol:    position.Symbol,   // 銘柄コード (仮)
-			Side:      position.Side,     // 売買区分 ("buy" or "sell") (仮)
-			OrderType: "market",          // 指値・成行など (ここでは成行を仮定)
-			Quantity:  position.Quantity, // 数量 (仮)
+			Symbol:        position.Symbol,   // 銘柄コード (仮)
+			Side:          position.Side,     // 売買区分 ("long" or "short") (仮)
+			OrderType:     "market",          // 指値・成行など (ここでは成行を仮定)
+			Quantity:      position.Quantity, // 数量 (仮)
+			ExecutionType: position.ExecutionType,
+			TradeType:     position.TradeType,
+			MarketCode:    position.MarketCode,
 			// Price は成行注文の場合は設定しない (または 0 などの特別な値を設定)
 		}
-		// userID, password を削除
+		// auto trading order
 		if _, err := a.tradingUsecase.PlaceOrder(context.Background(), &order); err != nil {
 			a.logger.Error("auto trading order error", zap.Error(err))
+		}
+
+		// dispatcherに登録
+		if order.TachibanaOrderID != "" {
+			a.dispatcher.RegisterOrderID(order.TachibanaOrderID, a.subscriberID)
 		}
 	}
 }

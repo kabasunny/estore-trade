@@ -14,9 +14,9 @@ func ConvertOrderToPlaceOrderPayload(order *domain.Order, tc *TachibanaClientImp
 	// 1. 売買区分 (sBaibaiKubun)
 	var baibaiKubun string
 	switch order.Side {
-	case "long", "buy": // "buy" を追加
+	case "long":
 		baibaiKubun = baibaiKubunBuy
-	case "short", "sell": // "sell" を追加
+	case "short":
 		baibaiKubun = baibaiKubunSell
 	default:
 		return nil, fmt.Errorf("invalid order side: %s", order.Side)

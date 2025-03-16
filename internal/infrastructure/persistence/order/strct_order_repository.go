@@ -1,9 +1,10 @@
+// internal/infrastructure/persistence/order/strct_order_repository.go
 package order
 
 import (
-	"database/sql"
+	"gorm.io/gorm"
 )
 
 type orderRepository struct {
-	db *sql.DB
+	db *gorm.DB // *sql.DB を *gorm.DB に変更
 }

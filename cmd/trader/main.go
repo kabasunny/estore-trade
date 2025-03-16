@@ -75,6 +75,10 @@ func main() {
 	if err := app.EventStream.Stop(); err != nil { //app経由で呼び出し
 		app.Logger.Error("Failed to stop EventStream", zap.Error(err))
 	}
+	// AutoTradingUsecase停止
+	if err := app.AutoTradingUsecase.Stop(); err != nil {
+		app.Logger.Error("Failed to stop AutoTradingUsecase", zap.Error(err))
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

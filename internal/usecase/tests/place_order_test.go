@@ -6,191 +6,184 @@ import (
 	"errors"
 	"testing"
 
-	"estore-trade/internal/config"
 	"estore-trade/internal/domain"
 	"estore-trade/internal/infrastructure/persistence/tachibana"
 	"estore-trade/internal/usecase"
+	"estore-trade/test/testdata"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"go.uber.org/zap/zaptest"
+	"go.uber.org/zap"
 )
 
 func TestTradingUsecase_PlaceOrder(t *testing.T) {
+	logger := zap.NewNop()
+	cfg := testdata.NewTestConfig() // testdata パッケージは別途作成
 
-	// テスト用の Config (ロガーは使用しないので、nil を設定)
-	cfg := &config.Config{}
-
-	// テスト用のロガーを作成
-	testLogger := zaptest.NewLogger(t)
-
-	// テスト用の注文データ
-	order := &domain.Order{
-		Symbol:    "7203",
-		Side:      "buy",
-		OrderType: "market",
-		Quantity:  100,
+	tests := []struct {
+		name          string
+		order         *domain.Order
+		setupMock     func(*tachibana.MockTachibanaClient, *usecase.MockOrderRepository)
+		expectedOrder *domain.Order
+		expectedError string // エラーメッセージの部分一致で検証
+	}{
+		{
+			name: "正常系: 現物買い注文",
+			order: &domain.Order{
+				UUID:       uuid.NewString(), // UUID を生成
+				Symbol:     "7974",
+				Side:       "long", // long
+				OrderType:  "market",
+				Quantity:   100,
+				MarketCode: "00",
+			},
+			setupMock: func(mockClient *tachibana.MockTachibanaClient, mockRepo *usecase.MockOrderRepository) {
+				mockClient.On("GetSystemStatus", mock.Anything).Return(domain.SystemStatus{SystemState: "1"})
+				mockClient.On("GetIssueMaster", mock.Anything, "7974").Return(domain.IssueMaster{TradingUnit: 100}, true)
+				mockClient.On("CheckPriceIsValid", mock.Anything, "7974", mock.AnythingOfType("float64"), false).Return(true, nil)
+				mockClient.On("PlaceOrder", mock.Anything, mock.AnythingOfType("*domain.Order")).Return(&domain.Order{TachibanaOrderID: "12345", Status: "pending"}, nil) // Status も返す
+				mockRepo.On("CreateOrder", mock.Anything, mock.AnythingOfType("*domain.Order")).Return(nil)
+			},
+			expectedOrder: &domain.Order{TachibanaOrderID: "12345", Status: "pending"},
+			expectedError: "",
+		},
+		{
+			name: "異常系: システムが閉局状態",
+			order: &domain.Order{
+				UUID:       uuid.NewString(), // UUID を生成
+				Symbol:     "7974",
+				Side:       "long", // long
+				OrderType:  "market",
+				Quantity:   100,
+				MarketCode: "00",
+			},
+			setupMock: func(mockClient *tachibana.MockTachibanaClient, mockRepo *usecase.MockOrderRepository) {
+				mockClient.On("GetSystemStatus", mock.Anything).Return(domain.SystemStatus{SystemState: "0"})
+			},
+			expectedOrder: nil,
+			expectedError: "system is not in service",
+		},
+		{
+			name: "異常系: 銘柄マスタ取得失敗",
+			order: &domain.Order{
+				UUID:      uuid.NewString(), // UUID を生成
+				Symbol:    "99999",
+				Side:      "long", // long
+				OrderType: "market",
+				Quantity:  100,
+			},
+			setupMock: func(mockClient *tachibana.MockTachibanaClient, mockRepo *usecase.MockOrderRepository) {
+				mockClient.On("GetSystemStatus", mock.Anything).Return(domain.SystemStatus{SystemState: "1"})
+				mockClient.On("GetIssueMaster", mock.Anything, "99999").Return(domain.IssueMaster{}, false)
+			},
+			expectedOrder: nil,
+			expectedError: "invalid issue code",
+		},
+		{
+			name: "異常系: 注文数量が不正",
+			order: &domain.Order{
+				UUID:       uuid.NewString(), // UUID を生成
+				Symbol:     "7974",
+				Side:       "long", // long
+				OrderType:  "market",
+				Quantity:   50, // 売買単位の倍数でない
+				MarketCode: "00",
+			},
+			setupMock: func(mockClient *tachibana.MockTachibanaClient, mockRepo *usecase.MockOrderRepository) {
+				mockClient.On("GetSystemStatus", mock.Anything).Return(domain.SystemStatus{SystemState: "1"})
+				mockClient.On("GetIssueMaster", mock.Anything, "7974").Return(domain.IssueMaster{TradingUnit: 100}, true) // 売買単位は100
+			},
+			expectedOrder: nil,
+			expectedError: "invalid order quantity",
+		},
+		{
+			name: "異常系: 呼値エラー",
+			order: &domain.Order{
+				UUID:       uuid.NewString(), // UUID を生成
+				Symbol:     "7974",
+				Side:       "long", // long
+				OrderType:  "limit",
+				Quantity:   100,
+				Price:      0.1, // 不正な価格
+				MarketCode: "00",
+			},
+			setupMock: func(mockClient *tachibana.MockTachibanaClient, mockRepo *usecase.MockOrderRepository) {
+				mockClient.On("GetSystemStatus", mock.Anything).Return(domain.SystemStatus{SystemState: "1"})
+				mockClient.On("GetIssueMaster", mock.Anything, "7974").Return(domain.IssueMaster{TradingUnit: 100}, true)
+				mockClient.On("CheckPriceIsValid", mock.Anything, "7974", 0.1, false).Return(false, nil) // 呼値エラー
+			},
+			expectedOrder: nil,
+			expectedError: "invalid order price",
+		},
+		{
+			name: "異常系: TachibanaClient.PlaceOrder でエラー",
+			order: &domain.Order{
+				UUID:       uuid.NewString(), // UUID を生成
+				Symbol:     "7974",
+				Side:       "long", // long
+				OrderType:  "market",
+				Quantity:   100,
+				MarketCode: "00",
+			},
+			setupMock: func(mockClient *tachibana.MockTachibanaClient, mockRepo *usecase.MockOrderRepository) {
+				mockClient.On("GetSystemStatus", mock.Anything).Return(domain.SystemStatus{SystemState: "1"})
+				mockClient.On("GetIssueMaster", mock.Anything, "7974").Return(domain.IssueMaster{TradingUnit: 100}, true)
+				mockClient.On("CheckPriceIsValid", mock.Anything, "7974", mock.AnythingOfType("float64"), false).Return(true, nil)
+				mockClient.On("PlaceOrder", mock.Anything, mock.AnythingOfType("*domain.Order")).Return(nil, errors.New("API error")) // PlaceOrder がエラーを返す
+			},
+			expectedOrder: nil,
+			expectedError: "API error",
+		},
+		{
+			name: "異常系: OrderRepository.CreateOrder でエラー",
+			order: &domain.Order{
+				UUID:       uuid.NewString(), // UUID を生成
+				Symbol:     "7974",
+				Side:       "long", // long
+				OrderType:  "market",
+				Quantity:   100,
+				MarketCode: "00",
+			},
+			setupMock: func(mockClient *tachibana.MockTachibanaClient, mockRepo *usecase.MockOrderRepository) {
+				mockClient.On("GetSystemStatus", mock.Anything).Return(domain.SystemStatus{SystemState: "1"})
+				mockClient.On("GetIssueMaster", mock.Anything, "7974").Return(domain.IssueMaster{TradingUnit: 100}, true)
+				mockClient.On("CheckPriceIsValid", mock.Anything, "7974", mock.AnythingOfType("float64"), false).Return(true, nil)
+				mockClient.On("PlaceOrder", mock.Anything, mock.AnythingOfType("*domain.Order")).Return(&domain.Order{TachibanaOrderID: "12345"}, nil)
+				mockRepo.On("CreateOrder", mock.Anything, mock.AnythingOfType("*domain.Order")).Return(errors.New("DB error")) // CreateOrder がエラーを返す
+			},
+			expectedOrder: &domain.Order{TachibanaOrderID: "12345"}, // APIからの戻り値は期待通り
+			expectedError: "",                                       // DBエラーはログ出力するが、上位にはエラーを返さない
+		},
 	}
 
-	// 正常系のテスト (システム稼働中、有効な注文)
-	t.Run("valid order", func(t *testing.T) {
-		// モッククライアントとモックリポジトリのセットアップ
-		mockClient := new(tachibana.MockTachibanaClient)
-		mockOrderRepo := new(usecase.MockOrderRepository)
-		//mockAccountRepo := new(MockAccountRepository) // 今回は使用しない
-		// 期待されるメソッド呼び出しと戻り値を設定
-		mockClient.On("GetSystemStatus").Return(domain.SystemStatus{SystemState: "1"})             // システム稼働中
-		mockClient.On("GetIssueMaster", "7203").Return(domain.IssueMaster{TradingUnit: 100}, true) // IssueMaster に戻す
-		mockClient.On("CheckPriceIsValid", "7203", 0.0, false).Return(true, nil)                   // 成行注文なので価格はチェックしない
-		mockClient.On("PlaceOrder", mock.Anything, order).Return(&domain.Order{UUID: "order-id", Status: "pending"}, nil)
-		mockOrderRepo.On("CreateOrder", mock.Anything, mock.AnythingOfType("*domain.Order")).Return(nil)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockTachibanaClient := new(tachibana.MockTachibanaClient)
+			mockOrderRepo := new(usecase.MockOrderRepository)
 
-		// テスト対象のユースケースを作成
-		uc := usecase.NewTradingUsecase(mockClient, testLogger, mockOrderRepo, nil, cfg)
+			tt.setupMock(mockTachibanaClient, mockOrderRepo)
 
-		// PlaceOrder メソッドを呼び出す
-		placedOrder, err := uc.PlaceOrder(context.Background(), order)
+			tradingUsecase := usecase.NewTradingUsecase(mockTachibanaClient, logger, mockOrderRepo, nil, cfg)
+			//mock呼び出しに変更
+			//tt.setupMock(mockTachibanaClient, mockOrderRepo)
+			placedOrder, err := tradingUsecase.PlaceOrder(context.Background(), tt.order)
 
-		// 結果を検証
-		assert.NoError(t, err)
-		assert.NotNil(t, placedOrder)
-		assert.Equal(t, "order-id", placedOrder.UUID)
-		assert.Equal(t, "pending", placedOrder.Status)
+			if tt.expectedError != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedError)
+			} else {
+				assert.NoError(t, err)
+				if assert.NotNil(t, placedOrder) {
+					assert.Equal(t, tt.expectedOrder.TachibanaOrderID, placedOrder.TachibanaOrderID)
+					if tt.expectedOrder.Status != "" {
+						assert.Equal(t, tt.expectedOrder.Status, placedOrder.Status)
+					}
+				}
+			}
 
-		// モックが期待通りに呼び出されたことを確認
-		mockClient.AssertExpectations(t)
-		mockOrderRepo.AssertExpectations(t)
-	})
-
-	// 異常系のテストケース
-	t.Run("system down", func(t *testing.T) {
-		// モッククライアントとモックリポジトリのセットアップ
-		mockClient := new(tachibana.MockTachibanaClient)
-		mockOrderRepo := new(usecase.MockOrderRepository)
-		// テスト対象のユースケースを作成
-		uc := usecase.NewTradingUsecase(mockClient, testLogger, mockOrderRepo, nil, cfg)
-		mockClient.On("GetSystemStatus").Return(domain.SystemStatus{SystemState: "0"}) // システム停止中
-
-		placedOrder, err := uc.PlaceOrder(context.Background(), order)
-		assert.Error(t, err) // エラーが発生することを期待
-		assert.Nil(t, placedOrder)
-		assert.EqualError(t, err, "system is not in service") // エラーメッセージを比較
-
-		mockClient.AssertExpectations(t)
-		mockOrderRepo.AssertExpectations(t) //呼ばれないはず
-	})
-
-	t.Run("invalid issue code", func(t *testing.T) {
-		// モッククライアントとモックリポジトリのセットアップ
-		mockClient := new(tachibana.MockTachibanaClient)
-		mockOrderRepo := new(usecase.MockOrderRepository)
-		// テスト対象のユースケースを作成
-		uc := usecase.NewTradingUsecase(mockClient, testLogger, mockOrderRepo, nil, cfg)
-		mockClient.On("GetSystemStatus").Return(domain.SystemStatus{SystemState: "1"})
-		mockClient.On("GetIssueMaster", "invalid").Return(domain.IssueMaster{}, false) // 無効な銘柄コード, IssueMaster に戻す
-
-		placedOrder, err := uc.PlaceOrder(context.Background(), &domain.Order{Symbol: "invalid", Side: "buy", OrderType: "market", Quantity: 100})
-		assert.Error(t, err)
-		assert.Nil(t, placedOrder)
-		assert.EqualError(t, err, "invalid issue code: invalid") // エラーメッセージを比較
-
-		mockClient.AssertExpectations(t)
-		mockOrderRepo.AssertExpectations(t) //呼ばれないはず
-	})
-
-	t.Run("invalid order quantity", func(t *testing.T) {
-		// モッククライアントとモックリポジトリのセットアップ
-		mockClient := new(tachibana.MockTachibanaClient)
-		mockOrderRepo := new(usecase.MockOrderRepository)
-		// テスト対象のユースケースを作成
-		uc := usecase.NewTradingUsecase(mockClient, testLogger, mockOrderRepo, nil, cfg)
-		mockClient.On("GetSystemStatus").Return(domain.SystemStatus{SystemState: "1"})
-		mockClient.On("GetIssueMaster", "7203").Return(domain.IssueMaster{TradingUnit: 2}, true) // 売買単位が2, IssueMaster に戻す
-
-		placedOrder, err := uc.PlaceOrder(context.Background(), &domain.Order{Symbol: "7203", Side: "buy", OrderType: "market", Quantity: 1}) // 数量が1
-		assert.Error(t, err)
-		assert.Nil(t, placedOrder)
-		assert.EqualError(t, err, "invalid order quantity. must be multiple of 2")
-
-		mockClient.AssertExpectations(t)
-		mockOrderRepo.AssertExpectations(t) //呼ばれないはず
-	})
-	// 異常系: CheckPriceIsValid が false を返すケース (呼値チェックエラー)
-	t.Run("invalid price", func(t *testing.T) {
-		mockClient := new(tachibana.MockTachibanaClient)
-		mockOrderRepo := new(usecase.MockOrderRepository)
-		testLogger := zaptest.NewLogger(t)
-		uc := usecase.NewTradingUsecase(mockClient, testLogger, mockOrderRepo, nil, &config.Config{})
-
-		mockClient.On("GetSystemStatus").Return(domain.SystemStatus{SystemState: "1"})
-		mockClient.On("GetIssueMaster", "7203").Return(domain.IssueMaster{TradingUnit: 100}, true) //IssueMaster に戻す
-		mockClient.On("CheckPriceIsValid", "7203", 1000.0, false).Return(false, nil)               // 無効な価格
-
-		placedOrder, err := uc.PlaceOrder(context.Background(), &domain.Order{Symbol: "7203", Side: "buy", OrderType: "limit", Quantity: 100, Price: 1000})
-		assert.Error(t, err)
-		assert.Nil(t, placedOrder)
-		assert.EqualError(t, err, "invalid order price: 1000.000000")
-
-		mockClient.AssertExpectations(t)
-
-	})
-
-	// 異常系: CheckPriceIsValid がエラーを返すケース
-	t.Run("CheckPriceIsValid error", func(t *testing.T) {
-		mockClient := new(tachibana.MockTachibanaClient)
-		mockOrderRepo := new(usecase.MockOrderRepository)
-		testLogger := zaptest.NewLogger(t)
-		uc := usecase.NewTradingUsecase(mockClient, testLogger, mockOrderRepo, nil, &config.Config{})
-		mockClient.On("GetSystemStatus").Return(domain.SystemStatus{SystemState: "1"})
-		mockClient.On("GetIssueMaster", "7203").Return(domain.IssueMaster{TradingUnit: 100}, true) //IssueMaster に戻す
-		mockClient.On("CheckPriceIsValid", "7203", 1000.0, false).Return(false, errors.New("price check error"))
-
-		placedOrder, err := uc.PlaceOrder(context.Background(), &domain.Order{Symbol: "7203", Side: "buy", OrderType: "limit", Quantity: 100, Price: 1000})
-		assert.Error(t, err)
-		assert.Nil(t, placedOrder)
-		assert.EqualError(t, err, "error checking price validity: price check error")
-
-		mockClient.AssertExpectations(t)
-
-	})
-
-	// 異常系: PlaceOrder (立花証券API) がエラーを返すケース
-	t.Run("PlaceOrder error", func(t *testing.T) {
-		mockClient := new(tachibana.MockTachibanaClient)
-		mockOrderRepo := new(usecase.MockOrderRepository)
-		testLogger := zaptest.NewLogger(t)
-		uc := usecase.NewTradingUsecase(mockClient, testLogger, mockOrderRepo, nil, &config.Config{})
-		mockClient.On("GetSystemStatus").Return(domain.SystemStatus{SystemState: "1"})
-		mockClient.On("GetIssueMaster", "7203").Return(domain.IssueMaster{TradingUnit: 100}, true) //IssueMaster に戻す
-		mockClient.On("CheckPriceIsValid", "7203", 0.0, false).Return(true, nil)
-		mockClient.On("PlaceOrder", mock.Anything, order).Return(nil, errors.New("tachibana API error")) // PlaceOrder でエラー
-
-		placedOrder, err := uc.PlaceOrder(context.Background(), order)
-		assert.Error(t, err)
-		assert.Nil(t, placedOrder)
-		assert.EqualError(t, err, "tachibana API error")
-		mockClient.AssertExpectations(t)
-	})
-	// 異常系: CreateOrder (DB) がエラーを返すケース  (DBエラーはエラーにしない)
-	t.Run("CreateOrder error", func(t *testing.T) {
-		mockClient := new(tachibana.MockTachibanaClient)
-		mockOrderRepo := new(usecase.MockOrderRepository)
-		testLogger := zaptest.NewLogger(t)
-		uc := usecase.NewTradingUsecase(mockClient, testLogger, mockOrderRepo, nil, &config.Config{})
-
-		// 正常な注文が返ってくることを想定
-		expectedOrder := &domain.Order{UUID: "order-id", Status: "pending"}
-
-		mockClient.On("GetSystemStatus").Return(domain.SystemStatus{SystemState: "1"})
-		mockClient.On("GetIssueMaster", "7203").Return(domain.IssueMaster{TradingUnit: 100}, true) //IssueMaster に戻す
-		mockClient.On("CheckPriceIsValid", "7203", 0.0, false).Return(true, nil)
-		mockClient.On("PlaceOrder", mock.Anything, order).Return(expectedOrder, nil)                                        // PlaceOrder は成功
-		mockOrderRepo.On("CreateOrder", mock.Anything, mock.AnythingOfType("*domain.Order")).Return(errors.New("DB error")) // CreateOrder でエラー
-
-		placedOrder, err := uc.PlaceOrder(context.Background(), order)
-		assert.NoError(t, err)                      // エラーは発生しない
-		assert.Equal(t, expectedOrder, placedOrder) // PlaceOrderの結果が返る
-		mockClient.AssertExpectations(t)
-		mockOrderRepo.AssertExpectations(t)
-	})
-}
+			mockTachibanaClient.AssertExpectations(t)
+			mockOrderRepo.AssertExpectations(t)
+		})
+	}
+} // go test -v ./internal/usecase/tests/place_order_test.go

@@ -11,6 +11,7 @@ import (
 	"estore-trade/internal/config"
 	"estore-trade/internal/handler"
 	"estore-trade/internal/infrastructure/database/postgres"
+	"estore-trade/internal/infrastructure/dispatcher"
 	"estore-trade/internal/infrastructure/logger/zapLogger"
 	"estore-trade/internal/infrastructure/persistence/account"
 	"estore-trade/internal/infrastructure/persistence/master"
@@ -52,13 +53,17 @@ func InitApp() (*App, error) {
 	orderRepo := order.NewOrderRepository(db.DB())
 	accountRepo := account.NewAccountRepository(db.DB())
 
+	// OrderEventDispatcher のインスタンスを作成
+	orderEventDispatcher := dispatcher.NewOrderEventDispatcher(logger) // dispatcher パッケージを使用
+
 	tradingUsecase := usecase.NewTradingUsecase(tachibanaClient, logger, orderRepo, accountRepo, cfg)
 
+	// AutoTradingUsecaseの初期化: dispatcherを渡す
 	autoTradingAlgorithm := &auto_algorithm.AutoTradingAlgorithm{}
-	autoTradingUsecase := auto_usecase.NewAutoTradingUsecase(tradingUsecase, autoTradingAlgorithm, logger, cfg, tradingUsecase.GetEventChannelReader())
+	autoTradingUsecase := auto_usecase.NewAutoTradingUsecase(tradingUsecase, autoTradingAlgorithm, logger, cfg, orderEventDispatcher) // dispatcherを渡す
 
-	eventStream := tachibana.NewEventStream(tachibanaClient, cfg, logger, tradingUsecase.GetEventChannelWriter())
-
+	// EventStreamの初期化: dispatcherを渡す
+	eventStream := tachibana.NewEventStream(tachibanaClient, cfg, logger, orderEventDispatcher)
 	tradingHandler := handler.NewTradingHandler(tradingUsecase, logger)
 	http.HandleFunc("/trade", tradingHandler.HandleTrade)
 	httpServer := &http.Server{
@@ -67,16 +72,17 @@ func InitApp() (*App, error) {
 	}
 
 	return &App{
-		Config:             cfg,
-		Logger:             logger,
-		DB:                 db,
-		TachibanaClient:    tachibanaClient,
-		OrderRepo:          orderRepo,
-		AccountRepo:        accountRepo,
-		MasterDataRepo:     masterDataRepo,
-		TradingUsecase:     tradingUsecase,
-		AutoTradingUsecase: autoTradingUsecase,
-		EventStream:        eventStream,
-		HTTPServer:         httpServer,
+		Config:               cfg,
+		Logger:               logger,
+		DB:                   db,
+		TachibanaClient:      tachibanaClient,
+		OrderRepo:            orderRepo,
+		AccountRepo:          accountRepo,
+		MasterDataRepo:       masterDataRepo,
+		TradingUsecase:       tradingUsecase,
+		AutoTradingUsecase:   autoTradingUsecase,
+		OrderEventDispatcher: orderEventDispatcher, //  OrderEventDispatcherを追加
+		EventStream:          eventStream,
+		HTTPServer:           httpServer,
 	}, nil
 }
