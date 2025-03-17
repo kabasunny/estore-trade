@@ -7,16 +7,10 @@ import (
 	"fmt"
 )
 
-func (r *orderRepository) CancelOrder(ctx context.Context, orderID string) error {
-	// GORM を使って、注文のステータスを "canceled" に更新
-	result := r.db.WithContext(ctx).Model(&domain.Order{}).Where("uuid = ?", orderID).Update("status", "canceled")
+func (r *orderRepository) CreateOrder(ctx context.Context, order *domain.Order) error {
+	result := r.db.WithContext(ctx).Create(order)
 	if result.Error != nil {
-		return fmt.Errorf("failed to cancel order: %w", result.Error)
+		return fmt.Errorf("failed to create order: %w", result.Error)
 	}
-	// 更新された行がない場合は、エラー
-	if result.RowsAffected == 0 {
-		return fmt.Errorf("order not found: %s", orderID)
-	}
-
 	return nil
 }

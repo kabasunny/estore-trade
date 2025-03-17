@@ -1,84 +1,60 @@
-// internal/infrastructure/persistence/order/tests/cancel_order_test.go
-
-package order
+package order_test
 
 import (
 	"context"
-	"errors"
-	"estore-trade/internal/infrastructure/persistence/order"
-	"regexp"
 	"testing"
 
-	"github.com/DATA-DOG/go-sqlmock"
+	"estore-trade/internal/domain"
+	"estore-trade/internal/infrastructure/persistence/order"
+	"estore-trade/test/docker" // docker パッケージをインポート
+
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestOrderRepository_CancelOrder(t *testing.T) {
-	db, mock, err := sqlmock.New()
-	if err != nil {
-		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
-	}
-	defer db.Close()
-	repo := order.NewOrderRepository(db) //order.を追加
-	orderID := "order-1"
+	db, cleanup, err := docker.SetupTestDatabase() // SetupTestDatabase を呼び出す
+	require.NoError(t, err)
+	defer cleanup()
 
-	mock.ExpectExec(regexp.QuoteMeta(`
-        UPDATE orders
-        SET status = $2, updated_at = $3
-        WHERE id = $1
-    `)).WithArgs(orderID, "canceled", sqlmock.AnyArg()).WillReturnResult(sqlmock.NewResult(0, 1))
+	repo := order.NewOrderRepository(db)
 
-	err = repo.CancelOrder(context.Background(), orderID)
-	assert.NoError(t, err)
+	t.Run("正常系: 注文をキャンセルできること", func(t *testing.T) {
+		// テストデータの準備 (CreateOrder を使う)
+		order := &domain.Order{
+			UUID:             uuid.NewString(),
+			Symbol:           "7203",
+			Side:             "buy",
+			OrderType:        "market",
+			Quantity:         100,
+			Status:           "pending", // 初期ステータス
+			TachibanaOrderID: "tachibana-order-id",
+		}
+		err = repo.CreateOrder(context.Background(), order)
+		assert.NoError(t, err)
 
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expectations: %s", err)
-	}
+		// CancelOrder の呼び出し
+		err = repo.CancelOrder(context.Background(), order.UUID)
+		assert.NoError(t, err)
+
+		// 注文のステータスが "canceled" に更新されていることを確認
+		canceledOrder, err := repo.GetOrder(context.Background(), order.UUID)
+		assert.NoError(t, err)
+		if assert.NotNil(t, canceledOrder) {
+			assert.Equal(t, "canceled", canceledOrder.Status)
+		}
+	})
+
+	t.Run("異常系: 存在しない注文をキャンセルしようとするとエラーになること", func(t *testing.T) {
+		// CancelOrder の呼び出し (存在しない UUID を指定)
+		nonExistentUUID := uuid.NewString()
+		err := repo.CancelOrder(context.Background(), nonExistentUUID)
+		assert.Error(t, err) // エラーが発生することを期待
+		assert.Contains(t, err.Error(), "order not found")
+	})
+
+	// 他の異常系テストケース (必要に応じて追加)
 }
-func TestOrderRepository_CancelOrder_NotFound(t *testing.T) {
-	db, mock, err := sqlmock.New()
-	if err != nil {
-		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
-	}
-	defer db.Close()
 
-	repo := order.NewOrderRepository(db) //order.を追加
-
-	orderID := "non-existent-order"
-
-	mock.ExpectExec(regexp.QuoteMeta(`
-        UPDATE orders
-        SET status = $2, updated_at = $3
-        WHERE id = $1
-    `)).WithArgs(orderID, "canceled", sqlmock.AnyArg()).WillReturnResult(sqlmock.NewResult(0, 0))
-
-	err = repo.CancelOrder(context.Background(), orderID)
-	assert.Error(t, err) // NotFoundはエラー
-
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expectations: %s", err)
-	}
-}
-func TestOrderRepository_CancelOrder_Error(t *testing.T) {
-	db, mock, err := sqlmock.New()
-	if err != nil {
-		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
-	}
-	defer db.Close()
-
-	repo := order.NewOrderRepository(db) //order.を追加
-
-	orderID := "order-1"
-	expectedError := errors.New("database error")
-	mock.ExpectExec(regexp.QuoteMeta(`
-        UPDATE orders
-        SET status = $2, updated_at = $3
-        WHERE id = $1
-    `)).WithArgs(orderID, "canceled", sqlmock.AnyArg()).WillReturnError(expectedError)
-
-	err = repo.CancelOrder(context.Background(), orderID)
-	assert.Error(t, err)
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expectations: %s", err)
-	}
-}
+// go test -v ./internal/infrastructure/persistence/order/tests/cancel_order_test.go

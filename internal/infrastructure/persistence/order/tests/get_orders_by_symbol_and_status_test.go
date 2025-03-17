@@ -1,47 +1,54 @@
-// internal/infrastructure/persistence/order/tests/get_orders_by_symbol_and_status_test.go
-package order
+package order_test
 
 import (
 	"context"
-	"estore-trade/internal/domain"
-	"estore-trade/internal/infrastructure/persistence/order"
 	"testing"
 
-	"github.com/DATA-DOG/go-sqlmock"
+	"estore-trade/internal/domain"
+	"estore-trade/internal/infrastructure/persistence/order"
+	"estore-trade/test/docker" // docker パッケージをインポート
+
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestOrderRepository_GetOrdersBySymbolAndStatus(t *testing.T) {
-	db, mock, err := sqlmock.New()
-	if err != nil {
-		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
-	}
-	defer db.Close()
+	db, cleanup, err := docker.SetupTestDatabase() // SetupTestDatabase を呼び出す
+	require.NoError(t, err)
+	defer cleanup()
 
-	repo := order.NewOrderRepository(db) // order.を削除
+	repo := order.NewOrderRepository(db)
 
 	symbol := "7203"
 	status := "pending"
-	expectedOrders := []*domain.Order{
-		{UUID: "order-1", Symbol: symbol, Side: "buy", OrderType: "market", Quantity: 100, Status: status},
-		{UUID: "order-2", Symbol: symbol, Side: "sell", OrderType: "limit", Price: 1500, Quantity: 50, Status: status},
-	}
 
-	rows := sqlmock.NewRows([]string{"id", "symbol", "order_type", "side", "quantity", "price", "trigger_price", "filled_quantity", "average_price", "status", "tachibana_order_id", "commission", "expire_at", "created_at", "updated_at"})
-	for _, order := range expectedOrders {
-		rows.AddRow(order.UUID, order.Symbol, order.OrderType, order.Side, order.Quantity, order.Price,
-			order.TriggerPrice, order.FilledQuantity, order.AveragePrice, order.Status,
-			order.TachibanaOrderID, order.Commission, order.ExpireAt, order.CreatedAt, order.UpdatedAt)
-	}
-	mock.ExpectQuery("^SELECT (.+) FROM orders WHERE symbol = (.+) AND status = (.+)").WithArgs(symbol, status).WillReturnRows(rows)
+	t.Run("正常系: 指定されたシンボルとステータスの注文が複数取得できること", func(t *testing.T) {
+		// テストデータの準備 (CreateOrder を使う)
+		expectedOrders := []*domain.Order{
+			{UUID: uuid.NewString(), Symbol: symbol, Side: "long", OrderType: "market", Quantity: 100, Status: status},
+			{UUID: uuid.NewString(), Symbol: symbol, Side: "short", OrderType: "limit", Price: 1500, Quantity: 50, Status: status},
+		}
+		for _, order := range expectedOrders {
+			err = repo.CreateOrder(context.Background(), order)
+			assert.NoError(t, err)
+		}
 
-	orders, err := repo.GetOrdersBySymbolAndStatus(context.Background(), symbol, status)
-	assert.NoError(t, err)
-	assert.Len(t, orders, 2)
-	assert.Equal(t, expectedOrders[0].UUID, orders[0].UUID)
-	assert.Equal(t, expectedOrders[1].UUID, orders[1].UUID)
+		orders, err := repo.GetOrdersBySymbolAndStatus(context.Background(), symbol, status)
+		assert.NoError(t, err)
+		assert.Len(t, orders, 2)
+		if len(orders) > 1 { //追加
+			assert.Equal(t, expectedOrders[0].UUID, orders[0].UUID)
+			assert.Equal(t, expectedOrders[1].UUID, orders[1].UUID)
+		}
 
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expectations: %s", err)
-	}
+	})
+
+	t.Run("正常系: 指定されたシンボルとステータスの注文が存在しない場合、空のスライスが返ること", func(t *testing.T) {
+		orders, err := repo.GetOrdersBySymbolAndStatus(context.Background(), "non-existent-symbol", status)
+		assert.NoError(t, err)
+		assert.Empty(t, orders) // 空のスライス
+	})
 }
+
+// go test -v ./internal/infrastructure/persistence/order/tests/get_orders_by_symbol_and_status_test.go

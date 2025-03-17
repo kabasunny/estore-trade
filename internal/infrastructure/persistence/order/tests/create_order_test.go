@@ -42,3 +42,5 @@ func TestOrderRepository_CreateOrder(t *testing.T) {
 	assert.Equal(t, order.Symbol, got.Symbol)
 	// ... 他のフィールドも検証 ...
 }
+
+// go test -v ./internal/infrastructure/persistence/order/tests/create_order_test.go
