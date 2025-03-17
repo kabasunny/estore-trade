@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"estore-trade/internal/domain"
+	"estore-trade/internal/infrastructure/dispatcher" // dispatcher をインポート
 	"estore-trade/internal/infrastructure/persistence/tachibana"
 
 	"github.com/stretchr/testify/assert"
@@ -23,8 +24,9 @@ func TestEventStreamCreditBuy(t *testing.T) {
 		assert.NoError(t, err)
 		defer client.Logout(ctx)
 
-		eventCh := make(chan *domain.OrderEvent, 10)
-		eventStream := tachibana.NewEventStream(client, client.GetConfig(), client.GetLogger(), eventCh)
+		// dispatcher の作成
+		dispatcher := dispatcher.NewOrderEventDispatcher(client.GetLogger())
+		eventStream := tachibana.NewEventStream(client, client.GetConfig(), client.GetLogger(), dispatcher)
 
 		go func() {
 			err := eventStream.Start(ctx)
@@ -33,8 +35,6 @@ func TestEventStreamCreditBuy(t *testing.T) {
 			}
 		}()
 		defer eventStream.Stop()
-
-		time.Sleep(3 * time.Second) // イベントストリーム接続確立を待つ
 
 		// --- 信用新規買い注文 ---
 		creditBuyOrder := &domain.Order{
@@ -46,36 +46,44 @@ func TestEventStreamCreditBuy(t *testing.T) {
 			TradeType:  "credit_open", // 信用新規
 			// Price:      13000,      // 指値の場合 (例)
 		}
+
+		// 買い注文用のチャネルと購読ID
+		buyEventCh := make(chan *domain.OrderEvent, 10)
+		buyOrderID := "buyOrder"
+		dispatcher.Subscribe(buyOrderID, buyEventCh)
+		defer dispatcher.Unsubscribe(buyOrderID, buyEventCh)
+
 		placedCreditBuyOrder, err := client.PlaceOrder(ctx, creditBuyOrder)
 		if err != nil {
 			t.Fatalf("Failed to place credit buy order: %v", err)
 		}
 		assert.NotNil(t, placedCreditBuyOrder)
-		creditBuyOrderID := placedCreditBuyOrder.TachibanaOrderID
+
+		//購読IDと注文IDを関連付ける
+		dispatcher.RegisterOrderID(placedCreditBuyOrder.TachibanaOrderID, buyOrderID)
 
 		// --- 買い注文の約定確認 ---
 		timeout := time.After(60 * time.Second)
 		for {
 			select {
-			case event := <-eventCh:
+			case event := <-buyEventCh: // dispatcher経由でイベントを待ち受ける
 				if event == nil {
 					continue
 				}
 				fmt.Printf("Received event: %+v\n", event)
-				if event.EventType == "EC" && event.Order != nil && event.Order.TachibanaOrderID == creditBuyOrderID {
-					if event.Order.Status == "1" || event.Order.Status == "3" { // 受付済 or 一部約定
-						if event.Order.FilledQuantity > 0 { //約定数量が0より大きい
-							t.Logf("Credit buy order executed. Status: %s, Executed Quantity: %d", event.Order.Status, event.Order.FilledQuantity)
-							//取引区分が信用新規か確認
-							assert.Equal(t, "credit_open", event.Order.TradeType, "Order trade type should be credit_open") // TradeType をチェック
-							return                                                                                          // テスト成功
-						}
-						//assert.Equal(t, "long", event.Order.Side) //p_BBKB=3 なら long
-						// 他の必要なアサーションもここに追加(約定数量、約定価格など)
+				if event.EventType == "EC" && event.Order != nil && event.Order.TachibanaOrderID == placedCreditBuyOrder.TachibanaOrderID {
+					if event.Order.ExecutionStatus == "2" {
+						t.Logf("Credit buy order executed. Status: %s, Executed Quantity: %d", event.Order.Status, event.Order.FilledQuantity)
+						//取引区分が信用新規か確認
+						assert.Equal(t, "credit_open", event.Order.TradeType, "Order trade type should be credit_open") // TradeType をチェック
+						return                                                                                          // テスト成功
 					} else if event.Order.Status == "4" || event.Order.Status == "5" {
 						t.Fatalf("Credit buy order failed. Status: %s", event.Order.Status) //約定失敗
 						return                                                              //テスト失敗
 					}
+					// Statusが0や1の場合は何もせず、次のイベントを待つ（ループを継続）
+					// ログで状況確認(status=1(一部約定)の時もログ出力)
+					t.Logf("Waiting for full execution. Current Status: %s, FilledQuantity: %d", event.Order.Status, event.Order.FilledQuantity)
 				}
 			case <-timeout:
 				t.Fatalf("Timeout: Credit buy order execution event not received")
@@ -85,4 +93,4 @@ func TestEventStreamCreditBuy(t *testing.T) {
 	})
 }
 
-// go test -v ./internal/infrastructure/persistence/tachibana/tests/event_stream -run TestEventStreamCreditBuy
+// go test -v ./internal/infrastructure/persistence/tachibana/tests/event_stream/credit_buy_test.go

@@ -33,18 +33,20 @@ func (es *EventStream) parseEC(event *domain.OrderEvent, key, value string) erro
 		}
 	case "p_ODST": // 注文ステータス
 		event.Order.Status = value
+	case "p_EXST": //約定ステータス
+		event.Order.ExecutionStatus = value
 	case "p_CRPR": //注文価格
 		price, err := strconv.ParseFloat(value, 64)
 		if err != nil {
-			es.logger.Warn("Failed to parse p_CRPR to float64", zap.String("value", value), zap.Error(err))
-			return nil //parseに失敗しても、エラーにしない
+			es.logger.Error("Failed to parse p_CRPR to float64", zap.String("value", value), zap.Error(err))
+			return err //parseに失敗したらエラーを返す
 		}
 		event.Order.Price = price
 	case "p_CRSR": //注文数量
 		quantity, err := strconv.Atoi(value)
 		if err != nil {
-			es.logger.Warn("Failed to parse p_CRSR to int", zap.String("value", value), zap.Error(err))
-			return nil //parseに失敗しても、エラーにしない
+			es.logger.Error("Failed to parse p_CRSR to int", zap.String("value", value), zap.Error(err))
+			return err //parseに失敗したらエラーを返す
 		}
 		event.Order.Quantity = quantity
 	case "p_NT": // 通知種別
@@ -95,32 +97,23 @@ func (es *EventStream) parseEC(event *domain.OrderEvent, key, value string) erro
 	case "p_CRPRKB": // 注文値段区分
 
 	case "p_CRTKSR": // 取消数量
-		canceledQuantity, err := strconv.Atoi(value)
-		if err != nil {
-			es.logger.Warn("Failed to parse p_CRTKSR to int", zap.String("value", value), zap.Error(err))
-			return nil //parseに失敗しても、エラーにしない
-		}
-		event.Order.FilledQuantity -= canceledQuantity
+		// event.Order にフィールドがないため、ログ出力だけ
+		es.logger.Warn("p_CRTKSR in EC message.  This field is not currently used.", zap.String("value", value))
 
 	case "p_CREPSR": // 失効数量
-		expiredQuantity, err := strconv.Atoi(value)
-		if err != nil {
-			es.logger.Warn("Failed to parse p_CREPSR to int", zap.String("value", value), zap.Error(err))
-			return nil //parseに失敗しても、エラーにしない
-		}
-		event.Order.FilledQuantity -= expiredQuantity
+		// event.Order にフィールドがないため、ログ出力だけ
+		es.logger.Warn("p_CREXSR in EC message.  This field is not currently used.", zap.String("value", value))
 
 	case "p_CREXSR": // 約定済数量
 		executedQuantity, err := strconv.Atoi(value)
 		if err != nil {
-			es.logger.Warn("Failed to parse p_CREXSR to int", zap.String("value", value), zap.Error(err))
-			return nil //parseに失敗しても、エラーにしない
+			es.logger.Error("Failed to parse p_CREXSR to int", zap.String("value", value), zap.Error(err))
+			return err
 		}
 		event.Order.FilledQuantity = executedQuantity
 
 	case "p_KOFG": // 繰越フラグ
 	case "p_TTST": // 訂正取消ステータス
-	case "p_EXST": // 約定ステータス
 	case "p_LMIT": // 有効期限
 		event.Order.ExpireAt, _ = time.Parse("20060102", value) //parseに失敗しても、エラーにしない
 	case "p_JKK": //譲渡益課税区分
@@ -129,18 +122,13 @@ func (es *EventStream) parseEC(event *domain.OrderEvent, key, value string) erro
 	case "p_EXPR": //約定値段
 		executionPrice, err := strconv.ParseFloat(value, 64)
 		if err != nil {
-			es.logger.Warn("Failed to parse p_EXPR to float64", zap.String("value", value), zap.Error(err))
-			return nil //parseに失敗しても、エラーにしない
+			es.logger.Error("Failed to parse p_EXPR to float64", zap.String("value", value), zap.Error(err))
+			return err
 		}
 		event.Order.AveragePrice = executionPrice
 
-	case "p_EXSR": //約定数量
-		executionVolume, err := strconv.Atoi(value)
-		if err != nil {
-			es.logger.Warn("Failed to parse p_EXSR to int", zap.String("value", value), zap.Error(err))
-			return nil //parseに失敗しても、エラーにしない
-		}
-		event.Order.FilledQuantity = executionVolume
+	case "p_EXSR": //約定数量  ここは使用しない
+		es.logger.Warn("p_EXSR in EC message.  This field is not currently used.", zap.String("value", value))
 	case "p_EXRC": //取引所エラーコード
 	case "p_EXDT": //通知日時
 		event.Order.UpdatedAt, _ = time.Parse("20060102150405", value) //parseに失敗しても、エラーにしない
