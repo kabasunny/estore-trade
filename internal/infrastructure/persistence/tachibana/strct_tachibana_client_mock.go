@@ -71,6 +71,11 @@ func (m *MockTachibanaClient) GetPositions(ctx context.Context) ([]domain.Positi
 	return args.Get(0).([]domain.Position), args.Error(1)
 }
 
+func (m *MockTachibanaClient) SetTargetIssues(ctx context.Context, issueCodes []string) error {
+	args := m.Called(ctx, issueCodes)
+	return args.Error(0)
+}
+
 // 以下は、tachibana.TachibanaClient インターフェースに存在しないため、削除
 /*
 func (m *MockTachibanaClient) GetRequestURL() (string, error) {
@@ -111,11 +116,6 @@ func (m *MockTachibanaClient) GetIssueMarketRegulation(issueCode, marketCode str
 func (m *MockTachibanaClient) GetOperationStatusKabu(listedMarket string, unit string) (domain.OperationStatusKabu, bool) {
 	args := m.Called(listedMarket, unit)
 	return args.Get(0).(domain.OperationStatusKabu), args.Bool(1) //
-}
-
-func (m *MockTachibanaClient) SetTargetIssues(ctx context.Context, issueCodes []string) error {
-	args := m.Called(ctx, issueCodes)
-	return args.Error(0)
 }
 
 func (m *MockTachibanaClient) GetPriceData(ctx context.Context, issueCodes []string) ([]domain.PriceData, error) {

@@ -9,6 +9,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// internal/usecase/mthd_place_order.go
 // PlaceOrder は、APIを使用して注文を実行し、必要な事前チェックを行う
 func (uc *tradingUsecase) PlaceOrder(ctx context.Context, order *domain.Order) (*domain.Order, error) {
 	// 注文のログを出力
@@ -17,12 +18,6 @@ func (uc *tradingUsecase) PlaceOrder(ctx context.Context, order *domain.Order) (
 	// 注文のバリデーション
 	if err := order.Validate(); err != nil { //ドメイン層のバリデート
 		return nil, fmt.Errorf("invalid order: %w", err)
-	}
-
-	// システムの稼働状態を確認
-	systemStatus := uc.tachibanaClient.GetSystemStatus(ctx)
-	if systemStatus.SystemState != "1" { // システム状態  0：閉局 1：開局 2：一時停止
-		return nil, fmt.Errorf("system is not in service")
 	}
 
 	// 銘柄情報のチェック
@@ -37,12 +32,15 @@ func (uc *tradingUsecase) PlaceOrder(ctx context.Context, order *domain.Order) (
 	}
 
 	// 呼値のチェック (tachibana パッケージの関数を使用)
-	isValid, err := uc.tachibanaClient.CheckPriceIsValid(ctx, order.Symbol, order.Price, false) // 第3引数は isNextDay (当日なので false)
-	if err != nil {
-		return nil, fmt.Errorf("error checking price validity: %w", err)
-	}
-	if !isValid {
-		return nil, fmt.Errorf("invalid order price: %f", order.Price)
+	// 成行注文の場合は、CheckPriceIsValidを呼び出さない
+	if order.OrderType != "market" && order.OrderType != "stop" {
+		isValid, err := uc.tachibanaClient.CheckPriceIsValid(ctx, order.Symbol, order.Price, false) // 第3引数は isNextDay (当日なので false)
+		if err != nil {
+			return nil, fmt.Errorf("error checking price validity: %w", err)
+		}
+		if !isValid {
+			return nil, fmt.Errorf("invalid order price: %f", order.Price)
+		}
 	}
 
 	// 立花証券APIを使用して注文を実行
@@ -53,10 +51,14 @@ func (uc *tradingUsecase) PlaceOrder(ctx context.Context, order *domain.Order) (
 	}
 	uc.logger.Info("Order placed successfully", zap.String("order_id", placedOrder.TachibanaOrderID))
 
-	// DBに注文情報を保存 (orderRepo を使用)
-	if err := uc.orderRepo.CreateOrder(ctx, placedOrder); err != nil {
-		uc.logger.Error("Failed to save order to DB", zap.Error(err))
-		// DB保存に失敗しても、APIからの注文自体は成功しているので、ここではエラーを返さない (ロギングはする)
+	placedOrder.UUID = placedOrder.TachibanaOrderID
+
+	//注文直後の状態を使って、DBを更新(イベント経由)
+	if err := uc.UpdateOrderByEvent(ctx, &domain.OrderEvent{EventType: "EC", Order: placedOrder}); err != nil {
+		// ここではエラーを返さない (ログには記録)
+		uc.logger.Error("Failed to update order in DB after placing order", zap.String("orderID", placedOrder.TachibanaOrderID), zap.Error(err))
+		//return nil, fmt.Errorf("failed to update order after place order: %w", err) //エラーを返した方が、より堅牢になる
 	}
+
 	return placedOrder, nil
 }

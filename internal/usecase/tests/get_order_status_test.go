@@ -17,6 +17,7 @@ import (
 func TestTradingUsecase_GetOrderStatus(t *testing.T) {
 
 	orderID := "test-order-id"
+	orderDate := "20060102"
 
 	// 正常系のテスト
 	t.Run("valid order id", func(t *testing.T) {
@@ -25,7 +26,7 @@ func TestTradingUsecase_GetOrderStatus(t *testing.T) {
 		expectedOrder := &domain.Order{UUID: orderID, Status: "filled"}
 		mockClient.On("GetOrderStatus", mock.Anything, orderID).Return(expectedOrder, nil)
 
-		order, err := uc.GetOrderStatus(context.Background(), orderID)
+		order, err := uc.GetOrderStatus(context.Background(), orderID, orderDate)
 		assert.NoError(t, err)
 		assert.NotNil(t, order)
 		assert.Equal(t, expectedOrder, order)
@@ -40,7 +41,7 @@ func TestTradingUsecase_GetOrderStatus(t *testing.T) {
 		expectedError := errors.New("tachibana API error")
 		mockClient.On("GetOrderStatus", mock.Anything, orderID).Return((*domain.Order)(nil), expectedError)
 
-		order, err := uc.GetOrderStatus(context.Background(), orderID)
+		order, err := uc.GetOrderStatus(context.Background(), orderID, orderDate)
 		assert.Error(t, err)
 		assert.Nil(t, order)
 		assert.Equal(t, expectedError, err)

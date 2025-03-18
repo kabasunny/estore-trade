@@ -70,5 +70,10 @@ func (tc *TachibanaClientImple) PlaceOrder(ctx context.Context, order *domain.Or
 	order.TachibanaOrderID = orderID
 	order.Status = "pending" //初期状態ではpending
 
+	// sEigyouDay を取得し、BusinessDate に設定
+	if businessDate, ok := response["sEigyouDay"].(string); ok {
+		order.BusinessDate = businessDate
+	}
+
 	return order, nil
 }

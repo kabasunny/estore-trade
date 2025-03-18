@@ -1,4 +1,5 @@
-// internal/domain/strct_order.go
+// internal/domain/mthd_order_validate.go
+
 package domain
 
 import (
@@ -7,9 +8,9 @@ import (
 
 // Validate Order 構造体のバリデーション
 func (o *Order) Validate() error {
-	if o.UUID == "" {
-		return fmt.Errorf("order ID is required")
-	}
+	// if o.UUID == "" {
+	// 	return fmt.Errorf("order UUID is required") // UUID が空の場合のエラーメッセージ
+	// }
 	if o.Symbol == "" {
 		return fmt.Errorf("symbol is required")
 	}

@@ -1,3 +1,4 @@
+// internal/infrastructure/persistence/tachibana/mthd_check_price_is_valid.go
 package tachibana
 
 import (
@@ -8,10 +9,10 @@ import (
 
 // CheckPriceIsValid は指定された価格が正当であるかを確認
 func (tc *TachibanaClientImple) CheckPriceIsValid(ctx context.Context, issueCode string, price float64, isNextDay bool) (bool, error) {
-	// fmt.Println("AAAAAAAAAAAAAAAAAA")
-	// priceが0以下の場合はエラー
+	// priceが0以下、かつ、指値、逆指値の場合のみエラーとする　　　　　　　　　　　　　　　　　　　　　　　　　←ここがポイント
 	if price <= 0 {
-		return false, nil
+		//return false, nil //これだとpriceが0以下の時に全てエラーになってしまう
+		return false, fmt.Errorf("invalid price: %f", price) //priceの内容をエラーに含める
 	}
 	tc.mu.RLock()         // ミューテックスのロック
 	defer tc.mu.RUnlock() // メソッド終了時にロック解除
@@ -21,8 +22,6 @@ func (tc *TachibanaClientImple) CheckPriceIsValid(ctx context.Context, issueCode
 	if !ok {
 		return false, fmt.Errorf("IssueMarketMaster not found for issueCode: %s", issueCode)
 	}
-
-	// fmt.Println("BBBBBBBBBBBBBBBBBB")
 
 	unitNumberStr := issueMarket.CallPriceUnitNumber
 	if isNextDay {
@@ -37,20 +36,15 @@ func (tc *TachibanaClientImple) CheckPriceIsValid(ctx context.Context, issueCode
 		return true, nil // または return false, fmt.Errorf(...)
 	}
 
-	// fmt.Println("DDDDDDDDDDDDDDDDDD")
-
 	unitNumber, err := strconv.Atoi(unitNumberStr)
 	if err != nil {
 		return false, fmt.Errorf("invalid CallPriceUnitNumber: %s", unitNumberStr)
 	}
 
-	// fmt.Println("FFFFFFFFFFFFFFFFFFFF")
-
 	callPrice, ok := tc.GetCallPrice(strconv.Itoa(unitNumber)) // Getter を使う
 	if !ok {
 		return false, fmt.Errorf("CallPrice not found for unitNumber: %d", unitNumber)
 	}
-	// fmt.Printf("GGGGGGGGGGGGGGGGGGGG")
 
 	// isValidPrice 関数を使ってチェック
 	return isValidPrice(price, callPrice), nil

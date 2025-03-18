@@ -28,7 +28,7 @@ type TachibanaClient interface {
 	// GetIssueMarketRegulation(issueCode, marketCode string) (domain.IssueMarketRegulation, bool)
 	// GetOperationStatusKabu(listedMarket string, unit string) (domain.OperationStatusKabu, bool)
 	CheckPriceIsValid(ctx context.Context, issueCode string, price float64, isNextDay bool) (bool, error)
-	// SetTargetIssues(ctx context.Context, issueCodes []string) error
+	SetTargetIssues(ctx context.Context, issueCodes []string) error
 	// GetPriceData(ctx context.Context, issueCodes []string) ([]domain.PriceData, error)
 	// GetMasterData() *domain.MasterData
 

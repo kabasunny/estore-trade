@@ -10,7 +10,7 @@ import (
 // Order 株式の注文
 type Order struct {
 	gorm.Model                 // ID, CreatedAt, UpdatedAt, DeletedAt を追加
-	UUID             string    `gorm:"type:varchar(255);unique;not null"` // UUID
+	UUID             string    `gorm:"type:varchar(255);unique;not null"` // 現状は　TachibanaOrderID　を代入する実装
 	Symbol           string    `gorm:"type:varchar(10);not null"`         // p_IC 銘柄コード
 	Side             string    `gorm:"type:varchar(5);not null"`          // "long" or "short"  p_BBKB 売買区分
 	OrderType        string    `gorm:"type:varchar(50);not null"`         // 注文タイプ ("market", "limit", "stop" など)
